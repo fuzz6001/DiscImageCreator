@@ -15,6 +15,7 @@
  */
 #include <windows.h>
 #include <ntddmmc.h>
+#include <shlwapi.h>
 #include "struct.h"
 #include "check.h"
 #include "convert.h"
