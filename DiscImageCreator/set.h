@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 #pragma once
+#include <windows.h>
+#include <ntddmmc.h>
 #include "enum.h"
 
 VOID SetReadCDCommand(
