@@ -21,9 +21,9 @@
 #include <ntddscsi.h>
 #define _NTSCSI_USER_MODE_
 #include <scsi.h>
+#include <tchar.h>
 #endif
 #include <stdio.h>
-#include <tchar.h>
 #include "forwardDeclaration.h"
 #include "calcHash.h"
 
