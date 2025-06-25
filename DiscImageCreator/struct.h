@@ -18,6 +18,7 @@
 #include <ntddscsi.h>
 #define _NTSCSI_USER_MODE_
 #include <scsi.h>
+#include <stdio.h>
 #include "forwardDeclaration.h"
 #include "calcHash.h"
 
