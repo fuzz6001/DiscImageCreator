@@ -1,7 +1,7 @@
 name: Manual Build DiscImageCreator
 
 on:
-  push:
+  #push:
   workflow_dispatch:
 
 jobs:
