@@ -21,6 +21,7 @@
  * 		"強制終了しました。\n本体が改造されている\nおそれがあります。";
  */
 #ifdef _WIN32
+#include <windows.h>
 #include <setupapi.h>
 #endif
 #include "struct.h"
