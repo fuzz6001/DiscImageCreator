@@ -1,14 +1,17 @@
 /*
 Copyright(C) 2003, Y.Kanechika. All rights reserved.
 Copyright(C) 2006, C-yan. All rights reserved.
-�\�[�X�R�[�h�y�уo�C�i���`���̗��p�y�эĔz�z�́A�����̉��ςɊւ�炸�A�ȉ��̏����𖞂�������A������B
+ソースコード及びバイナリ形式の利用及び再配布は、それらの改変に関わらず、以下の条件を満たす限り、許可する。
 
-1.�\�[�X�R�[�h�̍Ĕz�z�́A��L�̒��쌠�\���A���̏�񃊃X�g�A����шȉ��̖Ɛӎ����𖾋L�������͂𔺂��āA�s��Ȃ���΂Ȃ�Ȃ��B
-2.�o�C�i���`���̍Ĕz�z�́A��L�̒��쌠�\���A���̏�񃊃X�g�A�y�шȉ��̖Ɛӎ������A�z�z���ɕt������������A���͏��ނ֖��L���Ȃ���΂Ȃ�Ȃ��B
-3.�\�[�X�R�[�h�y�уo�C�i���`���̍Ĕz�z�ɂ����āA�z�z�ɕK�v�ȕ����I�R�X�g������㉿�̗v���A���͂���ɗނ��郉�C�Z���X�s�ׂ��s���Ă͂Ȃ�Ȃ��B�i���Ɨ��p�͋֎~�j
+1.ソースコードの再配布は、上記の著作権表示、この条約リスト、および以下の免責事項を明記した文章を伴って、行わなければならない。
+2.バイナリ形式の再配布は、上記の著作権表示、この条約リスト、及び以下の免責事項を、配布物に付属する説明書、又は書類へ明記しなければならない。
+3.ソースコード及びバイナリ形式の再配布において、配布に必要な物理的コストを上回る代価の要求、又はそれに類するライセンス行為を行ってはならない。（商業利用は禁止）
 
-���̃\�t�g�E�F�A�̗��p���甭�������A�����Ȃ���ɂ����Ă��A���̒��쌠�҂́A���Q�ɑ΂��ӔC�͂Ȃ��B
+このソフトウェアの利用から発生した、いかなる問題においても、この著作権者は、損害に対し責任はない。
 */
+#ifdef _WIN32
+#include <windows.h>
+#endif
 #include "CheckSector.h"
 
 static const DWORD EDC_crctable[256] = {
