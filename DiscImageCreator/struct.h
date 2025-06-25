@@ -16,6 +16,7 @@
 #pragma once
 #include <windows.h>
 #include <ntddscsi.h>
+#include <scsi.h>
 #include "forwardDeclaration.h"
 #include "calcHash.h"
 
