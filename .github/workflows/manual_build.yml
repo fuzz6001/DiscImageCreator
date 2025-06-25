@@ -43,7 +43,8 @@ jobs:
 
       - name: Build with MSBuild
         if: ${{ matrix.os == 'windows-latest' }}
-        run: msbuild DiscImageCreator.sln /p:Configuration=Release_ANSI #/p:Platform=x64
+        #run: msbuild DiscImageCreator.sln /p:Configuration=Release_ANSI /p:Platform=x64
+        run: msbuild DiscImageCreator.sln /p:Configuration=Release
 
       # Linux: MSBuild
       #- name: Set up MSBuild (Linux)
