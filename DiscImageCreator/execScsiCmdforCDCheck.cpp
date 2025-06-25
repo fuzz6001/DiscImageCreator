@@ -18,9 +18,11 @@
  * due to the Japanese text in ReadCDForScanningPsxAntiMod().
  * This sample text is high up in this file to allow some editors
  * to autodetect encoding:
- * 		"‹­§I—¹‚µ‚Ü‚µ‚½B\n–{‘Ì‚ª‰ü‘¢‚³‚ê‚Ä‚¢‚é\n‚¨‚»‚ê‚ª‚ ‚è‚Ü‚·B";
+ * 		"å¼·åˆ¶çµ‚äº†ã—ã¾ã—ãŸã€‚\næœ¬ä½“ãŒæ”¹é€ ã•ã‚Œã¦ã„ã‚‹\nãŠãã‚ŒãŒã‚ã‚Šã¾ã™ã€‚";
  */
-
+#ifdef _WIN32
+#include <setupapi.h>
+#endif
 #include "struct.h"
 #include "calcHash.h"
 #include "check.h"
@@ -2519,7 +2521,7 @@ VOID ReadCDForScanningPsxAntiMod(
 	CONST CHAR antiModStrEn[] =
 		"     SOFTWARE TERMINATED\nCONSOLE MAY HAVE BEEN MODIFIED\n     CALL 1-888-780-7690";
 	CONST CHAR antiModStrJp[] =
-		"‹­§I—¹‚µ‚Ü‚µ‚½B\n–{‘Ì‚ª‰ü‘¢‚³‚ê‚Ä‚¢‚é\n‚¨‚»‚ê‚ª‚ ‚è‚Ü‚·B";
+		"å¼·åˆ¶çµ‚äº†ã—ã¾ã—ãŸã€‚\næœ¬ä½“ãŒæ”¹é€ ã•ã‚Œã¦ã„ã‚‹\nãŠãã‚ŒãŒã‚ã‚Šã¾ã™ã€‚";
 	CDB::_READ12 cdb = {};
 	cdb.OperationCode = SCSIOP_READ12;
 	cdb.TransferLength[3] = 2;
