@@ -1,7 +1,6 @@
-name: Manual Build DiscImageCreator
+name: Manual Build DiscImageCreator (Meson)
 
 on:
-  #push:
   workflow_dispatch:
 
 jobs:
@@ -9,11 +8,19 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Set up MSBuild
-      uses: microsoft/setup-msbuild@v2
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
-    - name: Build with MSBuild
-      run: msbuild /p:Configuration=Release DiscImageCreator.sln
+      - name: Install Meson and Ninja
+        run: pip install meson ninja
+
+      - name: Configure Meson
+        run: meson setup builddir --buildtype release
+
+      - name: Build with Meson
+        run: meson compile -C builddir
