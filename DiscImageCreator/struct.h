@@ -16,6 +16,7 @@
 #pragma once
 #include <windows.h>
 #include <ntddcdrm.h>
+#include <ntddcdvd.h>
 #include <ntddscsi.h>
 #define _NTSCSI_USER_MODE_
 #include <scsi.h>
