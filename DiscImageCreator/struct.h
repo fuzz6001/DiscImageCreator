@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 #pragma once
+#ifdef _WIN32
 #include <windows.h>
 #include <ntddcdrm.h>
 #include <ntddcdvd.h>
@@ -22,6 +23,7 @@
 #include <scsi.h>
 #include <stdio.h>
 #include <tchar.h>
+#endif
 #include "forwardDeclaration.h"
 #include "calcHash.h"
 
