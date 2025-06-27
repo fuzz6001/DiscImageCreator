@@ -15,7 +15,6 @@
  */
 #ifdef _WIN32
 #include <windows.h>
-#include <atlbase.h>
 #include <wintrust.h>
 #endif
 #include "struct.h"
