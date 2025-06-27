@@ -49,7 +49,6 @@ jobs:
           $time = Get-Date -Format "HH:mm:ss"
           $content = "#define BUILD_DATE ${date}`n#define BUILD_TIME ${time}`n"
           Set-Content -Path DiscImageCreator\buildDateTime.h -Value $content -Encoding ascii
-          Get-Content DiscImageCreator\buildDateTime.h
           # Build
           # msbuild DiscImageCreator.sln /p:Configuration=Release_ANSI /p:Platform=x64
           msbuild DiscImageCreator.sln /p:Configuration=Release
