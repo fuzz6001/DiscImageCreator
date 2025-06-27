@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 #ifdef _WIN32
+#include <locale.h>
 #include <time.h>
 #endif
 #include "struct.h"
