@@ -1,4 +1,6 @@
 #ifdef _WIN32
+#include <ctype.h>
+#include <tchar.h>
 // https://stackoverflow.com/questions/42354008/strcasestr-still-not-working/45194545#45194545
 char* strcasestr(const char* haystack, const char* needle) {
     /* Edge case: The empty string is a substring of everything. */
