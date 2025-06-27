@@ -37,6 +37,15 @@ jobs:
         run: meson compile -C builddir
 
       # Windows: MSBuild
+      - name: Generate buildDateTime.h
+        run: |
+          $date = Get-Date -Format "yyyy-MM-dd"
+          $time = Get-Date -Format "HH:mm:ss"
+          @"
+#define BUILD_DATETIME ""$date""
+#define BUILD_DATETIME ""$time""
+"@ | Out-File -Encoding ASCII DiscImageCreator\buildDateTime.h
+
       - name: Set up MSBuild (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
         uses: microsoft/setup-msbuild@v2
