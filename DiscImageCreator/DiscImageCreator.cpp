@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 #ifdef _WIN32
+#include <dbghelp.h>
 #include <shlwapi.h>
+#include <time.h>
 #endif
 #include "buildDateTime.h"
 #include "struct.h"
