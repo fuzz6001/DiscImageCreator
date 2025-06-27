@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 #ifdef _WIN32
+#include <windows.h>
 #include <ntddmmc.h>
 #endif
 #include "struct.h"
