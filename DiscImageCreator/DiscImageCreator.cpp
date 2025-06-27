@@ -13,6 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#ifdef _WIN32
+#include <shlwapi.h>
+#endif
 #include "buildDateTime.h"
 #include "struct.h"
 #include "calcHash.h"
@@ -1944,7 +1947,7 @@ int createCmdFile(int argc, _TCHAR* argv[], _TCHAR* pszFullPath, LPTSTR pszDateT
 		if (!g_LogFile.fpCommandLine) {
 			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 			if (GetLastError() == 123) {
-				OutputErrorString("Please remove \\, /, :, *, ?, Åg, <, >, | of the filename\n");
+				OutputErrorString("Please remove \\, /, :, *, ?, ¬Åg, <, >, | of the filename\n");
 			}
 			return FALSE;
 		}
