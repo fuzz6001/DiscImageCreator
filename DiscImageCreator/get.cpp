@@ -13,6 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#ifdef _WIN32
+#include <shlwapi.h>
+#include <time.h>
+#endif
 #include "struct.h"
 #include "check.h"
 #include "convert.h"
