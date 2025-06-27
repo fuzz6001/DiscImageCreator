@@ -37,23 +37,22 @@ jobs:
         run: meson compile -C builddir
 
       # Windows: MSBuild
-      - name: Generate buildDateTime.h
-        if: ${{ matrix.os == 'windows-latest' }}
-        run: |
-          $date = Get-Date -Format "yyyy-MM-dd"
-          $time = Get-Date -Format "HH:mm:ss"
-          $content = "#define BUILD_DATE ${date}\n#define BUILD_TIME ${time}\n"
-          Set-Content -Path DiscImageCreator\buildDateTime.h -Value $content -Encoding ascii
-          Get-Content DiscImageCreator\buildDateTime.h
-
       - name: Set up MSBuild (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
         uses: microsoft/setup-msbuild@v2
 
       - name: Build with MSBuild
         if: ${{ matrix.os == 'windows-latest' }}
-        #run: msbuild DiscImageCreator.sln /p:Configuration=Release_ANSI /p:Platform=x64
-        run: msbuild DiscImageCreator.sln /p:Configuration=Release
+        run: |
+          # Generate buildDateTime.h
+          $date = Get-Date -Format "yyyy-MM-dd"
+          $time = Get-Date -Format "HH:mm:ss"
+          $content = "#define BUILD_DATE ${date}\n#define BUILD_TIME ${time}\n"
+          Set-Content -Path DiscImageCreator\buildDateTime.h -Value $content -Encoding ascii
+          Get-Content DiscImageCreator\buildDateTime.h
+          # Build
+          # msbuild DiscImageCreator.sln /p:Configuration=Release_ANSI /p:Platform=x64
+          msbuild DiscImageCreator.sln /p:Configuration=Release
 
       # Linux: MSBuild
       #- name: Set up MSBuild (Linux)
