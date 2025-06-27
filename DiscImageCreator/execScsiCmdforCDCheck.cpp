@@ -21,7 +21,6 @@
  * 		"強制終了しました。\n本体が改造されている\nおそれがあります。";
  */
 #ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <dbghelp.h>
 #include <setupapi.h>
