@@ -14,15 +14,6 @@
  * limitations under the License.
  */
 #pragma once
-#ifdef _WIN32
-#include <windows.h>
-#include <ntddcdrm.h>
-#include <ntddcdvd.h>
-#include <ntddscsi.h>
-#define _NTSCSI_USER_MODE_
-#include <scsi.h>
-#include <tchar.h>
-#endif
 #include <stdio.h>
 #include "forwardDeclaration.h"
 #include "calcHash.h"
