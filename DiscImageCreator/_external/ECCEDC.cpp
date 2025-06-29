@@ -9,9 +9,6 @@ Copyright(C) 2006, C-yan. All rights reserved.
 
 このソフトウェアの利用から発生した、いかなる問題においても、この著作権者は、損害に対し責任はない。
 */
-#ifdef _WIN32
-#include <windows.h>
-#endif
 #include "CheckSector.h"
 
 static const DWORD EDC_crctable[256] = {
