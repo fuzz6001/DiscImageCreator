@@ -1,7 +1,7 @@
 name: Cross-Platform Build
 
 on:
-  push:
+  #push:
   workflow_dispatch:
 
 jobs:
