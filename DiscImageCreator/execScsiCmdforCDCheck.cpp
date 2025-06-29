@@ -20,12 +20,6 @@
  * to autodetect encoding:
  * 		"強制終了しました。\n本体が改造されている\nおそれがあります。";
  */
-#ifdef _WIN32
-#include <windows.h>
-#include <dbghelp.h>
-#include <setupapi.h>
-#include <shlwapi.h>
-#endif
 #include "struct.h"
 #include "calcHash.h"
 #include "check.h"
