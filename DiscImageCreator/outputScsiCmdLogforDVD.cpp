@@ -13,10 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifdef _WIN32
-#include <windows.h>
-#include <ntddmmc.h>
-#endif
 #include "struct.h"
 #include "output.h"
 #include "outputScsiCmdLogforCD.h"
