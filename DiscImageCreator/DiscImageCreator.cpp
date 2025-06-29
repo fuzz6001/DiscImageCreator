@@ -13,9 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifdef _WIN32
-#include "stdafx.h"
-#endif
 #include "buildDateTime.h"
 #include "struct.h"
 #include "calcHash.h"
