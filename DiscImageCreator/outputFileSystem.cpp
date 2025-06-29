@@ -13,10 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifdef _WIN32
-#include <locale.h>
-#include <time.h>
-#endif
 #include "struct.h"
 #include "convert.h"
 #include "get.h"
