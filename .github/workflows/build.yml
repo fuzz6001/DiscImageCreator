@@ -52,7 +52,7 @@ jobs:
           Get-Content DiscImageCreator\buildDateTime.h
           # Build
           # msbuild DiscImageCreator.sln /p:Configuration=Release_ANSI /p:Platform=x64
-          msbuild DiscImageCreator.sln /p:Configuration=Release /Yu stdafx.h
+          msbuild DiscImageCreator.sln /p:Configuration=Release /p:ForcedIncludeFiles=stdafx.h
 
       # Linux: MSBuild
       #- name: Set up MSBuild (Linux)
