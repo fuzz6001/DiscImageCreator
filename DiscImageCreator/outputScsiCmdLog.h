@@ -14,10 +14,6 @@
  * limitations under the License.
  */
 #pragma once
-#ifdef _WIN32
-#include <windows.h>
-#include <ntddmmc.h>
-#endif
 
 VOID OutputInquiry(
 	PINQUIRYDATA pInquiry
