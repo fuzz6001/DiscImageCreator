@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 #pragma once
+#include <stdio.h>
 #include "forwardDeclaration.h"
 #include "calcHash.h"
 
