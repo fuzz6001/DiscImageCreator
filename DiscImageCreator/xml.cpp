@@ -413,7 +413,8 @@ BOOL OutputHash(
 
 BOOL CalcAndGetHash(
 #ifdef _WIN32
-	CComPtr<IXmlWriter> pWriter,
+	//CComPtr<IXmlWriter> pWriter,
+	IXmlWriter* pWriter,
 #else
 	XMLElement* pWriter,
 #endif
@@ -617,8 +618,10 @@ BOOL CalcAndGetHash(
 
 BOOL OutputRomElement(
 #ifdef _WIN32
-	CComPtr<IXmlWriter> pWriter,
-	CComPtr<IXmlWriter> pWriterSuppl,
+	//CComPtr<IXmlWriter> pWriter,
+	//CComPtr<IXmlWriter> pWriterSuppl,
+	IXmlWriter* pWriter,
+	IXmlWriter* pWriterSuppl,
 #else
 	XMLElement* pWriter,
 	XMLElement* pWriterSuppl,
@@ -705,8 +708,10 @@ BOOL OutputRomElement(
 
 BOOL XmlWriterInit(
 #ifdef _WIN32
-	CComPtr<IXmlWriter> pWriter,
-	CComPtr<IStream> pWriteStream
+	//CComPtr<IXmlWriter> pWriter,
+	//CComPtr<IStream> pWriteStream
+	IXmlWriter* pWriter,
+	IStream* pWriteStream
 #else
 	XMLDocument* xmlWriter
 #endif
@@ -745,7 +750,8 @@ BOOL XmlWriterInit(
 
 BOOL XmlWriteStartElementForGamename(
 #ifdef _WIN32
-	CComPtr<IXmlWriter> pWriter,
+	//CComPtr<IXmlWriter> pWriter,
+	IXmlWriter* pWriter,
 	LPCWSTR pwszLocalName,
 	LPCWSTR pwszAttributeName,
 	LPWCH pCurrentDir
@@ -781,7 +787,8 @@ BOOL XmlWriteStartElementForGamename(
 
 BOOL XmlWriteStartElementForOthername(
 #ifdef _WIN32
-	CComPtr<IXmlWriter> pWriter,
+	//CComPtr<IXmlWriter> pWriter,
+	IXmlWriter* pWriter,
 	LPCWSTR pwszLocalName
 #else
 	XMLElement* readElem2,
@@ -815,7 +822,8 @@ BOOL XmlWriteStartElementForOthername(
 
 BOOL XmlWriteString(
 #ifdef _WIN32
-	CComPtr<IXmlWriter> pWriter,
+	//CComPtr<IXmlWriter> pWriter,
+	IXmlWriter* pWriter,
 	LPCWSTR pwszLocalName,
 	LPCWSTR pwszValue,
 	LPWCH pCurrentDir
@@ -867,7 +875,8 @@ BOOL XmlWriteString(
 
 #ifdef _WIN32
 BOOL XmlWriteEndElement(
-	CComPtr<IXmlWriter> pWriter
+	//CComPtr<IXmlWriter> pWriter
+	IXmlWriter* pWriter
 ) {
 	HRESULT hr = S_OK;
 	if (FAILED(hr = pWriter->WriteEndElement())) {
@@ -879,7 +888,8 @@ BOOL XmlWriteEndElement(
 }
 
 BOOL XmlWriteEndDocument(
-	CComPtr<IXmlWriter> pWriter
+	//CComPtr<IXmlWriter> pWriter
+	IXmlWriter* pWriter
 ) {
 	HRESULT hr = S_OK;
 	if (FAILED(hr = pWriter->WriteEndDocument())) {
@@ -922,8 +932,10 @@ BOOL ReadWriteDat(
 	}
 
 	HRESULT hr = S_OK;
-	CComPtr<IXmlReader> pReader;
-	CComPtr<IStream> pReadStream;
+	//CComPtr<IXmlReader> pReader;
+	//CComPtr<IStream> pReadStream;
+	IXmlReader* pReader;
+	IStream* pReadStream;
 	if (FAILED(hr = SHCreateStreamOnFileW(wszDefaultDat, STGM_READ, &pReadStream))) {
 		OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 		OutputErrorString("Dat error: %08.8lx\n", hr);
@@ -994,26 +1006,30 @@ BOOL ReadWriteDat(
 	wszDatPathForStreamSuppl[size - 1] = 0;
 #endif
 
-	CComPtr<IXmlWriter> pWriter = NULL;
+	//CComPtr<IXmlWriter> pWriter = NULL;
+	IXmlWriter* pWriter = NULL;
 	if (FAILED(hr = CreateXmlWriter(__uuidof(IXmlWriter), reinterpret_cast<void**>(&pWriter), 0))) {
 		OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 		OutputErrorString("Dat error: %08.8lx\n", hr);
 		return FALSE;
 	}
-	CComPtr<IStream> pWriteStream = NULL;
+	//CComPtr<IStream> pWriteStream = NULL;
+	IStream* pWriteStream = NULL;
 	if (FAILED(hr = SHCreateStreamOnFileW(wszDatPathForStream, STGM_CREATE | STGM_WRITE, &pWriteStream))) {
 		OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 		OutputErrorString("Dat error: %08.8lx\n", hr);
 		return FALSE;
 	}
 
-	CComPtr<IXmlWriter> pWriterSuppl = NULL;
+	//CComPtr<IXmlWriter> pWriterSuppl = NULL;
+	IXmlWriter* pWriterSuppl = NULL;
 	if (FAILED(hr = CreateXmlWriter(__uuidof(IXmlWriter), reinterpret_cast<void**>(&pWriterSuppl), 0))) {
 		OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 		OutputErrorString("Dat error: %08.8lx\n", hr);
 		return FALSE;
 	}
-	CComPtr<IStream> pWriteStreamSuppl = NULL;
+	//CComPtr<IStream> pWriteStreamSuppl = NULL;
+	IStream* pWriteStreamSuppl = NULL;
 	if (FAILED(hr = SHCreateStreamOnFileW(wszDatPathForStreamSuppl, STGM_CREATE | STGM_WRITE, &pWriteStreamSuppl))) {
 		OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 		OutputErrorString("Dat error: %08.8lx\n", hr);
