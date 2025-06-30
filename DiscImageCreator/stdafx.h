@@ -42,7 +42,7 @@
 // XML
 #define _ATL_CSTRING_EXPLICIT_CONSTRUCTORS
 //#include <atlbase.h>
-#include <atlstr.h>
+//#include <atlstr.h>
 #include <xmllite.h>
 #pragma comment(lib, "xmllite.lib")
 
