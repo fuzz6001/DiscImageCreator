@@ -182,8 +182,7 @@ BOOL OutputHash(
 	PEXT_ARG pExtArg,
 #ifdef _WIN32
 	//CComPtr<IXmlWriter> pWriter,
-	auto deleter = [](IXmlWriter* p) { if (p) p->Release(); };
-	std::unique_ptr<IXmlWriter, decltype(deleter)> pWriter(nullptr, deleter);
+	IXmlWriter* pWriter,
 #else
 	XMLElement* pWriter,
 #endif
