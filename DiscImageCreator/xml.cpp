@@ -180,7 +180,7 @@ BOOL Get1stNonZeroPositionRear(
 
 BOOL OutputHash(
 	PEXT_ARG pExtArg,
-#ifdef _WIN32
+#if 0//def _WIN32
 	CComPtr<IXmlWriter> pWriter,
 #else
 	XMLElement* pWriter,
@@ -188,7 +188,7 @@ BOOL OutputHash(
 	PHASH_CHUNK pHash,
 	PMESSAGE_DIGEST_CHUNK pDigest
 ) {
-#ifdef _WIN32
+#if 0//def _WIN32
 	HRESULT hr = S_OK;
 	if (FAILED(hr = pWriter->WriteStartElement(NULL, L"rom", NULL))) {
 		OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
