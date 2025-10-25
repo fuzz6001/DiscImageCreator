@@ -415,6 +415,7 @@
     <ClInclude Include="_external\md5.h" />
     <ClInclude Include="_external\NonStandardFunction.h" />
     <ClInclude Include="_external\prngcd.h" />
+    <ClInclude Include="_external\reedSolomonGF64.h" />
     <ClInclude Include="_external\rijndael-alg-fst.h" />
     <ClInclude Include="_external\sha-private.h" />
     <ClInclude Include="_external\sha.h" />
@@ -464,6 +465,7 @@
     <ClCompile Include="_external\NonStandardFunction.cpp" />
     <ClCompile Include="_external\platform_util.cpp" />
     <ClCompile Include="_external\prngcd.cpp" />
+    <ClCompile Include="_external\reedSolomonGF64.cpp" />
     <ClCompile Include="_external\rijndael-alg-fst.cpp" />
     <ClCompile Include="_external\sha1.cpp" />
     <ClCompile Include="_external\sha224-256.cpp" />

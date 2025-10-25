@@ -395,7 +395,8 @@ VOID WriteSubChannel(
 	PDISC_PER_SECTOR pDiscPerSector,
 	LPBYTE lpSubcodeRaw,
 	INT nLBA,
-	FILE* fpSub
+	FILE* fpSub,
+	FILE* fpSubInterleave
 );
 
 VOID WriteErrorBuffer(
@@ -411,6 +412,7 @@ VOID WriteErrorBuffer(
 	INT nPadType,
 	FILE* fpImg,
 	FILE* fpSub,
+	FILE* fpSubInterleave,
 	FILE* fpC2
 );
 

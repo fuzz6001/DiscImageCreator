@@ -29,6 +29,7 @@
 #include "set.h"
 #include "xml.h"
 #include "_external/prngcd.h"
+#include "_external/reedSolomonGF64.h"
 
 #define DEFAULT_REREAD_VAL			(4000)
 #define DEFAULT_CACHE_DELETE_VAL	(1)
@@ -242,9 +243,8 @@ int execForDumping(PEXEC_TYPE pExecType, PEXT_ARG pExtArg, _TCHAR* pszFullPath, 
 					}
 					make_scrambled_table();
 					make_crc16_table();
-#if 0
-					make_crc6_table();
-#endif
+					cdg_rs6_init();
+
 					CDFLAG::_READ_CD::_ERROR_FLAGS c2 = CDFLAG::_READ_CD::NoC2;
 					ReadCDForCheckingByteOrder(pExtArg, pDevice, &c2);
 					if (pExtArg->byC2 || pExtArg->byC2New) {

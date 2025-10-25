@@ -949,6 +949,7 @@ VOID ProcessReturnedContinue(
 	INT nPadType,
 	FILE* fpImg,
 	FILE* fpSub,
+	FILE* fpSubInterleave,
 	FILE* fpC2
 ) {
 #if 0
@@ -958,7 +959,7 @@ VOID ProcessReturnedContinue(
 	}
 #endif
 	WriteErrorBuffer(pExecType, pExtArg, pDevice, pDisc, pDiscPerSector,
-		scrambled_table, nLBA, nLastErrLBA, nMainDataType, nPadType, fpImg, fpSub, fpC2);
+		scrambled_table, nLBA, nLastErrLBA, nMainDataType, nPadType, fpImg, fpSub, fpSubInterleave, fpC2);
 	UpdateTmpMainHeader(pDiscPerSector, nMainDataType);
 
 	BYTE trk = (BYTE)(pDiscPerSector->subch.current.byTrackNum + 1);
@@ -1059,6 +1060,7 @@ BOOL ReadCDAll(
 
 	BOOL bRet = TRUE;
 	FILE* fpSub = NULL;
+	FILE* fpSubInterleave = NULL;
 	LPBYTE pBuf = NULL;
 	LPBYTE pNextBuf = NULL;
 	LPBYTE pNextNextBuf = NULL;
@@ -1068,6 +1070,11 @@ BOOL ReadCDAll(
 		// init start
 		if (NULL == (fpSub = CreateOrOpenFile(
 			pszPath, NULL, NULL, NULL, NULL, _T(".sub"), _T("wb"), 0, 0))) {
+			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+			throw FALSE;
+		}
+		if (NULL == (fpSubInterleave = CreateOrOpenFile(
+			pszPath, _T("_interleave"), NULL, NULL, NULL, _T(".sub"), _T("wb"), 0, 0))) {
 			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 			throw FALSE;
 		}
@@ -1194,8 +1201,8 @@ BOOL ReadCDAll(
 					tmpLBA = nLBA - pDisc->MAIN.nAdjustSectorNum;
 				}
 				if (IsValidProtectedSector(pDisc, tmpLBA, idx)) {
-					ProcessReturnedContinue(pExecType, pExtArg, pDevice, pDisc
-						, pDiscPerSector, nLBA, nLastErrLBA, nMainDataType, padByUsr55, fpScm, fpSub, fpC2);
+					ProcessReturnedContinue(pExecType, pExtArg, pDevice, pDisc, pDiscPerSector
+						, nLBA, nLastErrLBA, nMainDataType, padByUsr55, fpScm, fpSub, fpSubInterleave, fpC2);
 					nLBA++;
 					n1stLBA++;
 					continue;
@@ -1273,8 +1280,8 @@ BOOL ReadCDAll(
 					if ((pDisc->SCSI.toc.TrackData[pDiscPerSector->byTrackNum - 1].Control & AUDIO_DATA_TRACK) == 0) {
 						nPadType = padByAll0;
 					}
-					ProcessReturnedContinue(pExecType, pExtArg, pDevice, pDisc
-						, pDiscPerSector, nLBA, nLastErrLBA, nMainDataType, nPadType, fpScm, fpSub, fpC2);
+					ProcessReturnedContinue(pExecType, pExtArg, pDevice, pDisc, pDiscPerSector
+						, nLBA, nLastErrLBA, nMainDataType, nPadType, fpScm, fpSub, fpSubInterleave, fpC2);
 					FlushLog();
 				}
 			}
@@ -1397,7 +1404,7 @@ BOOL ReadCDAll(
 							OutputCDSub96Align(pDiscPerSector->subcode.current, nLBA);
 							OutputCDSub96Raw(standardOut, lpSubcodeRaw, nLBA);
 #endif
-							WriteSubChannel(pDisc, pDiscPerSector, lpSubcodeRaw, nLBA, fpSub);
+							WriteSubChannel(pDisc, pDiscPerSector, lpSubcodeRaw, nLBA, fpSub, fpSubInterleave);
 							SetTrackAttribution(pExecType, pDisc, pDiscPerSector, nLBA);
 							FixMainHeader(pExtArg, pDisc, pDiscPerSector, nLBA, nMainDataType);
 							UpdateTmpSubch(pDiscPerSector);
@@ -1436,6 +1443,7 @@ BOOL ReadCDAll(
 		}
 		OutputString("\n");
 		FcloseAndNull(fpSub);
+		FcloseAndNull(fpSubInterleave);
 		FlushLog();
 
 		for (INT i = 0; i < pDisc->SCSI.toc.LastTrack; i++) {
@@ -1514,6 +1522,7 @@ BOOL ReadCDAll(
 	}
 	FcloseAndNull(fpScm);
 	FcloseAndNull(fpSub);
+	FcloseAndNull(fpSubInterleave);
 	if (IsValid0xF1SupportedDrive(pDevice)) {
 		FreeAndNull(pDisc->lpCachedBuf);
 	}
@@ -1553,6 +1562,7 @@ BOOL ReadCDForSwap(
 	}
 	BOOL bRet = TRUE;
 	FILE* fpSub = NULL;
+	FILE* fpSubInterleave = NULL;
 	FILE* fpLeadout = NULL;
 	LPBYTE pBuf = NULL;
 	INT nMainDataType = scrambled;
@@ -1565,6 +1575,11 @@ BOOL ReadCDForSwap(
 #ifndef __DEBUG
 		if (NULL == (fpSub = CreateOrOpenFile(
 			pszPath, NULL, NULL, NULL, NULL, _T(".sub"), _T("wb"), 0, 0))) {
+			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+			throw FALSE;
+		}
+		if (NULL == (fpSubInterleave = CreateOrOpenFile(
+			pszPath, _T("_interleave"), NULL, NULL, NULL, _T(".sub"), _T("wb"), 0, 0))) {
 			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 			throw FALSE;
 		}
@@ -1630,7 +1645,7 @@ BOOL ReadCDForSwap(
 						pDisc->MAIN.nFixEndLBA = nLBA + pDisc->MAIN.nOffsetEnd;
 					}
 					ProcessReturnedContinue(pExecType, pExtArg, pDevice, pDisc
-						, pDiscPerSector, nLBA, 0, nMainDataType, padByAll0, fpScm, fpSub, fpC2);
+						, pDiscPerSector, nLBA, 0, nMainDataType, padByAll0, fpScm, fpSub, fpSubInterleave, fpC2);
 					if (pDisc->MAIN.nFixEndLBA == nLBA + 1) {
 						break;
 					}
@@ -1641,21 +1656,21 @@ BOOL ReadCDForSwap(
 					}
 					if (nLBA < nFirstLeadErrLBA + 670) {
 						for (INT i = 0; i < 670; i++) {
-							ProcessReturnedContinue(pExecType, pExtArg, pDevice, pDisc
-								, pDiscPerSector, nLBA, 0, nMainDataType, padByAll0, fpScm, fpSub, fpC2);
+							ProcessReturnedContinue(pExecType, pExtArg, pDevice, pDisc, pDiscPerSector
+								, nLBA, 0, nMainDataType, padByAll0, fpScm, fpSub, fpSubInterleave, fpC2);
 							nLBA++;
 							n1stLBA++;
 						}
 						continue;
 					}
 					else {
-						ProcessReturnedContinue(pExecType, pExtArg, pDevice, pDisc
-							, pDiscPerSector, nLBA, 0, nMainDataType, padByAll0, fpScm, fpSub, fpC2);
+						ProcessReturnedContinue(pExecType, pExtArg, pDevice, pDisc, pDiscPerSector
+							, nLBA, 0, nMainDataType, padByAll0, fpScm, fpSub, fpSubInterleave, fpC2);
 					}
 				}
 				else {
-					ProcessReturnedContinue(pExecType, pExtArg, pDevice, pDisc
-						, pDiscPerSector, nLBA, 0, nMainDataType, padByAll0, fpScm, fpSub, fpC2);
+					ProcessReturnedContinue(pExecType, pExtArg, pDevice, pDisc, pDiscPerSector
+						, nLBA, 0, nMainDataType, padByAll0, fpScm, fpSub, fpSubInterleave, fpC2);
 				}
 			}
 			else if (pDiscPerSector->bReturnCode == RETURNED_FALSE) {
@@ -1686,7 +1701,7 @@ BOOL ReadCDForSwap(
 						}
 						else {
 							AlignColumnSubcode(lpSubcodeRaw, pDiscPerSector->subcode.current);
-							WriteSubChannel(pDisc, pDiscPerSector, lpSubcodeRaw, nLBA, fpSub);
+							WriteSubChannel(pDisc, pDiscPerSector, lpSubcodeRaw, nLBA, fpSub, fpSubInterleave);
 						}
 						FlushLog();
 					}
@@ -1710,7 +1725,7 @@ BOOL ReadCDForSwap(
 #if 0
 							OutputCDSub96Align(pDiscPerSector->subcode.current, nLBA);
 #endif
-							WriteSubChannel(pDisc, pDiscPerSector, lpSubcodeRaw, nLBA, fpSub);
+							WriteSubChannel(pDisc, pDiscPerSector, lpSubcodeRaw, nLBA, fpSub, fpSubInterleave);
 							FixMainHeader(pExtArg, pDisc, pDiscPerSector, nLBA, nMainDataType);
 						}
 						UpdateTmpSubch(pDiscPerSector);
@@ -1727,6 +1742,7 @@ BOOL ReadCDForSwap(
 		}
 		OutputString("\n");
 		FcloseAndNull(fpSub);
+		FcloseAndNull(fpSubInterleave);
 		FlushLog();
 		nLBA = 0;
 
@@ -1933,6 +1949,7 @@ BOOL ReadCDForSwap(
 	FcloseAndNull(fpLeadout);
 	FcloseAndNull(fpScm);
 	FcloseAndNull(fpSub);
+	FcloseAndNull(fpSubInterleave);
 	FreeAndNull(pBuf);
 
 	return bRet;
@@ -1973,6 +1990,7 @@ BOOL ReadCDPartial(
 	}
 	BOOL bRet = TRUE;
 	FILE* fpSub = NULL;
+	FILE* fpSubInterleave = NULL;
 	LPBYTE pBuf = NULL;
 	LPBYTE pNextBuf = NULL;
 	LPBYTE pNextNextBuf = NULL;
@@ -1990,6 +2008,11 @@ BOOL ReadCDPartial(
 		if (!pExtArg->byReverse) {
 			if (NULL == (fpSub = CreateOrOpenFile(
 				pszPath, NULL, NULL, NULL, NULL, _T(".sub"), _T("wb"), 0, 0))) {
+				OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+				throw FALSE;
+			}
+			if (NULL == (fpSubInterleave = CreateOrOpenFile(
+				pszPath, _T("_interleave"), NULL, NULL, NULL, _T(".sub"), _T("wb"), 0, 0))) {
 				OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 				throw FALSE;
 			}
@@ -2179,7 +2202,7 @@ BOOL ReadCDPartial(
 						if (!bForceSkip) {
 							for (UINT i = 0; i < pExtArg->uiSkipSectors; i++) {
 								ProcessReturnedContinue(pExecType, pExtArg, pDevice, pDisc, pDiscPerSector
-									, nLBA, 0, nMainDataType, nPadType, fpBin, fpSub, fpC2);
+									, nLBA, 0, nMainDataType, nPadType, fpBin, fpSub, fpSubInterleave, fpC2);
 								nLBA++;
 								n1stLBA++;
 							}
@@ -2188,7 +2211,7 @@ BOOL ReadCDPartial(
 						else if (!bForceSkip2) {
 							for (UINT i = 0; i < pExtArg->uiSkipSectors2; i++) {
 								ProcessReturnedContinue(pExecType, pExtArg, pDevice, pDisc, pDiscPerSector
-									, nLBA, 0, nMainDataType, nPadType, fpBin, fpSub, fpC2);
+									, nLBA, 0, nMainDataType, nPadType, fpBin, fpSub, fpSubInterleave, fpC2);
 								nLBA++;
 								n1stLBA++;
 							}
@@ -2207,7 +2230,7 @@ BOOL ReadCDPartial(
 						continue;
 					}
 					ProcessReturnedContinue(pExecType, pExtArg, pDevice, pDisc, pDiscPerSector
-						, nLBA, 0, nMainDataType, nPadType, fpBin, fpSub, fpC2);
+						, nLBA, 0, nMainDataType, nPadType, fpBin, fpSub, fpSubInterleave, fpC2);
 					nRetryCnt = 1;
 					OutputLog(standardOut | fileMainError, "LBA[%06d, %#07x] Reread NG\n", nLBA, (UINT)nLBA);
 				}
@@ -2316,7 +2339,7 @@ BOOL ReadCDPartial(
 #if 0
 							OutputCDSub96Align(pDiscPerSector->subcode.current, nLBA);
 #endif
-							WriteSubChannel(pDisc, pDiscPerSector, lpSubcodeRaw, nLBA, fpSub);
+							WriteSubChannel(pDisc, pDiscPerSector, lpSubcodeRaw, nLBA, fpSub, fpSubInterleave);
 							if (!(*pExecType == audio || *pExecType == data)) {
 								SetTrackAttribution(pExecType, pDisc, pDiscPerSector, nLBA);
 							}
@@ -2351,6 +2374,7 @@ BOOL ReadCDPartial(
 		}
 		OutputString("\n");
 		FcloseAndNull(fpSub);
+		FcloseAndNull(fpSubInterleave);
 		FlushLog();
 
 		if (*pExecType == gd) {
@@ -2489,6 +2513,7 @@ BOOL ReadCDPartial(
 	}
 	FcloseAndNull(fpBin);
 	FcloseAndNull(fpSub);
+	FcloseAndNull(fpSubInterleave);
 	FreeAndNull(pBuf);
 	if (1 <= pExtArg->uiSubAddionalNum) {
 		FreeAndNull(pNextBuf);
@@ -2530,6 +2555,7 @@ BOOL ReadCDForTages(
 	BOOL bRet = TRUE;
 	FILE* fpSubForward = NULL;
 	FILE* fpSubBack = NULL;
+	FILE* fpSubInterleave = NULL;
 	LPBYTE pBuf = NULL;
 	LPBYTE pNextBuf = NULL;
 	LPBYTE pNextNextBuf = NULL;
@@ -2546,7 +2572,11 @@ BOOL ReadCDForTages(
 			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 			throw FALSE;
 		}
-
+		if (NULL == (fpSubInterleave = CreateOrOpenFile(
+			pszPath, _T("_interleave"), NULL, NULL, NULL, _T(".sub"), _T("wb"), 0, 0))) {
+			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+			throw FALSE;
+		}
 		BYTE byTransferLen = 1;
 		if (pDevice->byPlxtrDrive) {
 			byTransferLen = (BYTE)(pExtArg->uiSubAddionalNum + 1);
@@ -2690,7 +2720,7 @@ BOOL ReadCDForTages(
 #if 0
 						OutputCDSub96Align(pDiscPerSector->subcode.current, nLBA);
 #endif
-						WriteSubChannel(pDisc, pDiscPerSector, lpSubcodeRaw, nLBA, fpSubForward);
+						WriteSubChannel(pDisc, pDiscPerSector, lpSubcodeRaw, nLBA, fpSubForward, fpSubInterleave);
 						if (!(*pExecType == audio || *pExecType == data)) {
 							SetTrackAttribution(pExecType, pDisc, pDiscPerSector, nLBA);
 						}
@@ -2829,7 +2859,7 @@ BOOL ReadCDForTages(
 #if 0
 							OutputCDSub96Align(pDiscPerSector->subcode.current, nLBA);
 #endif
-							WriteSubChannel(pDisc, pDiscPerSector, lpSubcodeRaw, nLBA, fpSubBack);
+							WriteSubChannel(pDisc, pDiscPerSector, lpSubcodeRaw, nLBA, fpSubBack, fpSubInterleave);
 							if (!(*pExecType == audio || *pExecType == data)) {
 								SetTrackAttribution(pExecType, pDisc, pDiscPerSector, nLBA);
 							}

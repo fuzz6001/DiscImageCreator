@@ -1349,17 +1349,18 @@ BOOL ReadCDForCheckingSubRtoW(
 				}
 				memcpy(&scRW[k], tmpCode, sizeof(scRW[k]));
 				switch (scRW[k].command) {
-				case 0: // MODE 0, ITEM 0
+				case 0: // MODE 0, ITEM 0 : ZERO mode
 					break;
-				case 8: // MODE 1, ITEM 0
-					break;
-				case 9: // MODE 1, ITEM 1
+				case 8: // MODE 1, ITEM 0 : LINE-GRAPHICS mode
 					bCDG = TRUE;
 					break;
-				case 10: // MODE 1, ITEM 2
+				case 9: // MODE 1, ITEM 1 : TV-GRAPHICS mode
+					bCDG = TRUE;
+					break;
+				case 10: // MODE 1, ITEM 2 : EXTENDED TV-GRAPHICS mode
 					bCDEG = TRUE;
 					break;
-				case 17: // MODE 2, ITEM 1,2,3,5,6,7 or MODE 4
+				case 17: // MODE 2, ITEM 1,2,3,5,6,7 or MODE 4 : CD TEXT mode
 				case 18:
 				case 19:
 				case 21:
@@ -1367,9 +1368,9 @@ BOOL ReadCDForCheckingSubRtoW(
 				case 23:
 				case 32:
 					break;
-				case 24: // MODE 3, ITEM 0
+				case 24: // MODE 3, ITEM 0 : MIDI mode
 					break;
-				case 56: // MODE 7, ITEM 0
+				case 56: // MODE 7, ITEM 0 : USER mode
 					break;
 				default:
 					break;

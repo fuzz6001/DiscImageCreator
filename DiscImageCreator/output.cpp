@@ -697,8 +697,12 @@ VOID WriteSubChannel(
 	PDISC_PER_SECTOR pDiscPerSector,
 	LPBYTE lpSubcodeRaw,
 	INT nLBA,
-	FILE* fpSub
+	FILE* fpSub,
+	FILE* fpSubInterleave
 ) {
+	if (fpSubInterleave) {
+		fwrite(lpSubcodeRaw, sizeof(BYTE), CD_RAW_READ_SUBCODE_SIZE, fpSubInterleave);
+	}
 	if (fpSub) {
 		fwrite(pDiscPerSector->subcode.current, sizeof(BYTE), CD_RAW_READ_SUBCODE_SIZE, fpSub);
 		OutputCDSubToLog(pDisc, pDiscPerSector, lpSubcodeRaw, nLBA);
@@ -718,6 +722,7 @@ VOID WriteErrorBuffer(
 	INT nPadType,
 	FILE* fpImg,
 	FILE* fpSub,
+	FILE* fpSubInterleave,
 	FILE* fpC2
 ) {
 	UINT uiSize = 0;
@@ -832,7 +837,7 @@ VOID WriteErrorBuffer(
 		pDiscPerSector->subch.current.nAbsoluteTime++;
 		SetBufferFromTmpSubch(pDiscPerSector->subcode.current, pDiscPerSector->subch.current, TRUE, TRUE);
 		AlignColumnSubcode(lpSubcodeRaw, pDiscPerSector->subcode.current);
-		WriteSubChannel(pDisc, pDiscPerSector, lpSubcodeRaw, nLBA, fpSub);
+		WriteSubChannel(pDisc, pDiscPerSector, lpSubcodeRaw, nLBA, fpSub, fpSubInterleave);
 
 		if ((pExtArg->byC2 || pExtArg->byC2New) && pDevice->FEATURE.byC2ErrorData) {
 			fwrite(pDiscPerSector->data.current + pDevice->TRANSFER.uiBufC2Offset

@@ -236,7 +236,9 @@ See [wiki](https://github.com/saramibreak/DiscImageCreator/wiki)
 - .scm  
   2352 bytes/sector scrambled binary image of the img file.
 - .sub  
-  subchannel data of the CD. This file is used to a ccd file.
+  de-interleaved subchannel data of the CD. This file is used to a ccd file.
+- _interleave.sub  
+  interleaved subchannel data of the CD.
 - .toc  
   table of contents of the disc.
 - _CDZ.bin  
