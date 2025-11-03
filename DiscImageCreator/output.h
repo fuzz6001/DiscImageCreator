@@ -461,6 +461,11 @@ BOOL ProcessCreatingBin(
 	LPCTSTR pszPath
 );
 
+BOOL CreateBinWithCdg(
+	PDISC pDisc,
+	LPCTSTR pszFullPath
+);
+
 BOOL CreateCueCcd(
 	PEXT_ARG pExtArg,
 	PDISC pDisc,

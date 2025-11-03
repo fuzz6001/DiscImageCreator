@@ -1760,9 +1760,18 @@ BOOL ReadExeFromFile(
 					}
 					else if (pExtArg->byIntentionalSub) {
 						rewind(fp);
-						fread(lpBuf, sizeof(BYTE), (size_t)uiSecuromReadSize, fp);
 						BOOL bFound = FALSE;
-						while (!feof(fp) && !ferror(fp)) {
+						do {
+							size_t readsize = fread(lpBuf, sizeof(BYTE), (size_t)uiSecuromReadSize, fp);
+							if (readsize < (size_t)uiSecuromReadSize) {
+								if (feof(fp)) {
+									break;
+								}
+								else if (ferror(fp)) {
+									OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+									break;
+								}
+							}
 							for (UINT i = 0; i < uiSecuromReadSize - 8; i++) {
 								if (IsSecuromDllSig(lpBuf, i)) {
 									LONG lSigPos = (LONG)(ftell(fp) - uiSecuromReadSize + i);
@@ -1778,10 +1787,7 @@ BOOL ReadExeFromFile(
 							if (bFound) {
 								break;
 							}
-							else {
-								fread(lpBuf, sizeof(BYTE), (size_t)uiSecuromReadSize, fp);
-							}
-						}
+						} while (1);
 					}
 				}
 			}
@@ -2024,122 +2030,130 @@ BOOL ReadCDForCheckingExe(
 						_TCHAR buf[512] = {};
 						CONST INT nMaxTrimSize = 16;
 						INT nTrimSize = 0;
-						_fgetts(buf, sizeof(buf), fp);
-
-						while (!feof(fp) && !ferror(fp)) {
-							LPTCH pTrimBuf[nMaxTrimSize] = {};
-							pTrimBuf[0] = _tcstok(buf, _T(" ")); // space
-
-							for (INT nRoop = 1; nRoop < nMaxTrimSize; nRoop++) {
-								pTrimBuf[nRoop] = _tcstok(NULL, _T(" ")); // space
-
-								if (pTrimBuf[nRoop] == NULL) {
+						do {
+							if (_fgetts(buf, sizeof(buf), fp) == NULL) {
+								if (feof(fp)) {
 									break;
 								}
-								nTrimSize++;
-							}
-							// File size is over 0
-							if (_tcscmp(pTrimBuf[4], _T("0"))) {
-								OutputVolDescLog("Extracted from %" CHARWIDTH "s\n", pDisc->PROTECT.pFullNameForExe[n]);
-								// extract .exe or .dll from .cab
-								_sntprintf(str, nStrSize,
-									_T("\"\"%s\" e -o \"%s\" %s\" 2> NUL"), szPathIsc, FullPathWithDrive, pTrimBuf[5]);
-								_tsystem(str);
-
-								if (!GetCurrentDirectory(SIZE_OF_ARRAY(szTmpFullPath), szTmpFullPath)) {
+								else if (ferror(fp)) {
 									OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
-									return FALSE;
+									break;
 								}
-//#define DEBUGTEST4
+							}
+							else {
+								LPTCH pTrimBuf[nMaxTrimSize] = {};
+								pTrimBuf[0] = _tcstok(buf, _T(" ")); // space
+
+								for (INT nRoop = 1; nRoop < nMaxTrimSize; nRoop++) {
+									pTrimBuf[nRoop] = _tcstok(NULL, _T(" ")); // space
+
+									if (pTrimBuf[nRoop] == NULL) {
+										break;
+									}
+									nTrimSize++;
+								}
+								// File size is over 0
+								if (_tcscmp(pTrimBuf[4], _T("0"))) {
+									OutputVolDescLog("Extracted from %" CHARWIDTH "s\n", pDisc->PROTECT.pFullNameForExe[n]);
+									// extract .exe or .dll from .cab
+									_sntprintf(str, nStrSize,
+										_T("\"\"%s\" e -o \"%s\" %s\" 2> NUL"), szPathIsc, FullPathWithDrive, pTrimBuf[5]);
+									_tsystem(str);
+
+									if (!GetCurrentDirectory(SIZE_OF_ARRAY(szTmpFullPath), szTmpFullPath)) {
+										OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+										return FALSE;
+									}
+									//#define DEBUGTEST4
 #ifdef DEBUGTEST1
-								memcpy(pTrimBuf[6], "TCP", sizeof("TCP"));
-								if (pTrimBuf[7] == NULL) {
-									pTrimBuf[7] =(LPTCH) malloc(32);
-									memcpy(pTrimBuf[7], "Protocol.dll\n", sizeof("Protocol.dll\n"));
-								}
-								nTrimSize = 7;
+									memcpy(pTrimBuf[6], "TCP", sizeof("TCP"));
+									if (pTrimBuf[7] == NULL) {
+										pTrimBuf[7] = (LPTCH)malloc(32);
+										memcpy(pTrimBuf[7], "Protocol.dll\n", sizeof("Protocol.dll\n"));
+									}
+									nTrimSize = 7;
 #endif
 #ifdef DEBUGTEST2
-								memcpy(pTrimBuf[6], "TCP", sizeof("TCP"));
-								if (pTrimBuf[7] == NULL) {
-									pTrimBuf[7] = (LPTCH)malloc(32);
-									memcpy(pTrimBuf[7], "version\\Protocol.dll\n", sizeof("version\\Protocol.dll\n"));
-								}
-								nTrimSize = 7;
+									memcpy(pTrimBuf[6], "TCP", sizeof("TCP"));
+									if (pTrimBuf[7] == NULL) {
+										pTrimBuf[7] = (LPTCH)malloc(32);
+										memcpy(pTrimBuf[7], "version\\Protocol.dll\n", sizeof("version\\Protocol.dll\n"));
+									}
+									nTrimSize = 7;
 #endif
 #ifdef DEBUGTEST3
-								memcpy(pTrimBuf[6], "TCP", sizeof("TCP"));
-								if (pTrimBuf[7] == NULL) {
-									pTrimBuf[7] = (LPTCH)malloc(32);
-									memcpy(pTrimBuf[7], "version\\TCP", sizeof("version\\TCP"));
-								}
-								if (pTrimBuf[8] == NULL) {
-									pTrimBuf[8] = (LPTCH)malloc(32);
-									memcpy(pTrimBuf[8], "Protocol.dll\n", sizeof("Protocol.dll\n"));
-								}
-								nTrimSize = 8;
+									memcpy(pTrimBuf[6], "TCP", sizeof("TCP"));
+									if (pTrimBuf[7] == NULL) {
+										pTrimBuf[7] = (LPTCH)malloc(32);
+										memcpy(pTrimBuf[7], "version\\TCP", sizeof("version\\TCP"));
+									}
+									if (pTrimBuf[8] == NULL) {
+										pTrimBuf[8] = (LPTCH)malloc(32);
+										memcpy(pTrimBuf[8], "Protocol.dll\n", sizeof("Protocol.dll\n"));
+									}
+									nTrimSize = 8;
 #endif
 #ifdef DEBUGTEST4
-								memcpy(pTrimBuf[6], "utils\\clcompile.exe\n", sizeof("utils\\clcompile.exe\n"));
+									memcpy(pTrimBuf[6], "utils\\clcompile.exe\n", sizeof("utils\\clcompile.exe\n"));
 #endif
 #ifdef DEBUGTEST5
-								memcpy(pTrimBuf[6], "Data\\RTLibs\\1st", sizeof("Data\\RTLibs\\1st"));
-								if (pTrimBuf[7] == NULL) {
-									pTrimBuf[7] = (LPTCH)malloc(32);
-									memcpy(pTrimBuf[7], "trailer.dll\n", sizeof("trailer.dll\n"));
-								}
-								nTrimSize = 7;
-#endif
-								_TCHAR fpath[_MAX_PATH] = {};
-								_TCHAR fname[_MAX_FNAME] = {};
-								size_t len = 0;
-
-								for (INT idx = 6; idx <= nTrimSize; idx++) {
-									//           0      1         2     3          4   5   6
-									// ----------------------------------------------------------------------------
-									// 08-16-2002 18:06      36957 A___      12034   41 TCP Protocol.dll
-									// 08-16-2002 18:06      36957 A___      12034   41 TCP version\TCP Protocol.dll
-									// 03-27-2003 11:07     274432 A___     128354   56 utils\clcompile.exe
-									// 10-11-1999 14:01    6500356 A___    5305562  253 Data\RTLibs\1st trailer.dll
-									// 05-01-2003 11:46   11870212 A___   11492648  256 Data\RTLibs\L 01 in.dll
-									_tcscat(fpath, pTrimBuf[idx]);
-									len += _tcslen(pTrimBuf[idx]);
-									if (idx < nTrimSize) {
-										_tcscat(fpath, _T(" "));
-										len++;
+									memcpy(pTrimBuf[6], "Data\\RTLibs\\1st", sizeof("Data\\RTLibs\\1st"));
+									if (pTrimBuf[7] == NULL) {
+										pTrimBuf[7] = (LPTCH)malloc(32);
+										memcpy(pTrimBuf[7], "trailer.dll\n", sizeof("trailer.dll\n"));
 									}
-								}
-								_TCHAR* p = _tcsrchr(fpath, '\\');
-								if (p) {
-									// exclude path
-									len = _tcslen(p + sizeof(_TCHAR));
-									_tcsncpy(fname, p + sizeof(_TCHAR), len);
-								}
-								else {
-									_tcsncpy(fname, fpath, _MAX_FNAME);
-								}
+									nTrimSize = 7;
+#endif
+									_TCHAR fpath[_MAX_PATH] = {};
+									_TCHAR fname[_MAX_FNAME] = {};
+									size_t len = 0;
 
-								// Delete '\n'
-								fname[len - sizeof(_TCHAR)] = '\0';
-								_tcscat(szTmpFullPath, _T("\\"));
-								_tcscat(szTmpFullPath, fname);
+									for (INT idx = 6; idx <= nTrimSize; idx++) {
+										//           0      1         2     3          4   5   6
+										// ----------------------------------------------------------------------------
+										// 08-16-2002 18:06      36957 A___      12034   41 TCP Protocol.dll
+										// 08-16-2002 18:06      36957 A___      12034   41 TCP version\TCP Protocol.dll
+										// 03-27-2003 11:07     274432 A___     128354   56 utils\clcompile.exe
+										// 10-11-1999 14:01    6500356 A___    5305562  253 Data\RTLibs\1st trailer.dll
+										// 05-01-2003 11:46   11870212 A___   11492648  256 Data\RTLibs\L 01 in.dll
+										_tcscat(fpath, pTrimBuf[idx]);
+										len += _tcslen(pTrimBuf[idx]);
+										if (idx < nTrimSize) {
+											_tcscat(fpath, _T(" "));
+											len++;
+										}
+									}
+									_TCHAR* p = _tcsrchr(fpath, '\\');
+									if (p) {
+										// exclude path
+										len = _tcslen(p + sizeof(_TCHAR));
+										_tcsncpy(fname, p + sizeof(_TCHAR), len);
+									}
+									else {
+										_tcsncpy(fname, fpath, _MAX_FNAME);
+									}
 
-								if (!ReadExeFromFile(pExtArg, pDisc, szTmpFullPath, fname)) {
-									continue;
+									// Delete '\n'
+									fname[len - sizeof(_TCHAR)] = '\0';
+									_tcscat(szTmpFullPath, _T("\\"));
+									_tcscat(szTmpFullPath, fname);
+
+									if (!ReadExeFromFile(pExtArg, pDisc, szTmpFullPath, fname)) {
+										continue;
+									}
+									DWORD attr = GetFileAttributes(szTmpFullPath);
+									if (FILE_ATTRIBUTE_READONLY & attr) {
+										SetFileAttributes(szTmpFullPath, attr - FILE_ATTRIBUTE_READONLY);
+									}
+									if (!DeleteFile(szTmpFullPath)) {
+										OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+										OutputErrorString("Failed to DeleteFile %s\n", fname);
+									}
+									ZeroMemory(szTmpFullPath, sizeof(szTmpFullPath));
 								}
-								DWORD attr = GetFileAttributes(szTmpFullPath);
-								if (FILE_ATTRIBUTE_READONLY & attr) {
-									SetFileAttributes(szTmpFullPath, attr - FILE_ATTRIBUTE_READONLY);
-								}
-								if (!DeleteFile(szTmpFullPath)) {
-									OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
-									OutputErrorString("Failed to DeleteFile %s\n", fname);
-								}
-								ZeroMemory(szTmpFullPath, sizeof(szTmpFullPath));
+								nTrimSize = 0;
 							}
-							_fgetts(buf, sizeof(buf), fp);
-							nTrimSize = 0;
-						}
+						} while (1);
 						FcloseAndNull(fp);
 					}
 					if (!DeleteFile(szTmpPath)) {

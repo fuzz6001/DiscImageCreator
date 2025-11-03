@@ -1516,6 +1516,11 @@ BOOL ReadCDAll(
 		if (!ProcessCreatingBin(pExtArg, pDisc, pszPath)) {
 			throw FALSE;
 		}
+		if (pDevice->sub == CDFLAG::_READ_CD::Pack) {
+			if (!CreateBinWithCdg(pDisc, pszPath)) {
+				throw FALSE;
+			}
+		}
 	}
 	catch (BOOL ret) {
 		bRet = ret;
@@ -3304,7 +3309,10 @@ BOOL ReadCDOutOfRange(
 			for (UINT i = 1; i < fsize; i++) {
 				fseek(fpMain, (LONG)(fsize - i), SEEK_SET);
 				if ((fread(&buf, sizeof(BYTE), sizeof(buf), fpMain)) < sizeof(buf)) {
-					if (ferror(fpMain)) {
+					if (feof(fpMain)) {
+						break;
+					}
+					else if (ferror(fpMain)) {
 						OutputErrorString("Failed to read: read size %zu [F:%s][L:%d]\n", sizeof(buf), __FUNCTION__, __LINE__);
 						return FALSE;
 					}
@@ -3415,7 +3423,10 @@ BOOL ReadCDOutOfRange(
 		for (UINT i = 1; i < fsize; i++) {
 			fseek(fpMain, (LONG)(fsize - i), SEEK_SET);
 			if ((fread(&buf, sizeof(BYTE), sizeof(buf), fpMain)) < sizeof(buf)) {
-				if (ferror(fpMain)) {
+				if (feof(fpMain)) {
+					break;
+				}
+				else if (ferror(fpMain)) {
 					OutputErrorString("Failed to read: read size %zu [F:%s][L:%d]\n", sizeof(buf), __FUNCTION__, __LINE__);
 					return FALSE;
 				}
