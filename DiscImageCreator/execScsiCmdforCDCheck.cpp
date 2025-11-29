@@ -1563,14 +1563,14 @@ LONG GetOfsOfSecuromDllSig(
 }
 
 #ifdef _WIN32
-LRESULT WINAPI CabinetCallback(
-	IN PVOID pMyInstallData,
-	IN UINT Notification,
-	IN UINT Param1,
-	IN UINT Param2
-) {
+extern "C" UINT CALLBACK CabinetCallback(
+	PVOID pMyInstallData,
+	UINT  Notification,
+	UINT_PTR Param1,
+	UINT_PTR Param2
+) noexcept {
 	UNREFERENCED_PARAMETER(Param2);
-	LRESULT lRetVal = NO_ERROR;
+	UINT lRetVal = NO_ERROR;
 	TCHAR szTarget[_MAX_PATH];
 	FILE_IN_CABINET_INFO *pInfo = NULL;
 	FILEPATHS *pFilePaths = NULL;
