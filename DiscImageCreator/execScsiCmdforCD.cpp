@@ -449,7 +449,7 @@ BOOL ReadCDForRereadingSectorNew(
 						if ((fixedC2[t] & nBit) == nBit && (tmpC2[t] & nBit) == 0) {
 							INT nOfs = t * CHAR_BIT + n;
 							fixedMain[nOfs] = pDiscPerSector->data.current[nOfs];
-							fixedC2[t] ^= nBit;
+							fixedC2[t] = (BYTE)(fixedC2[t] ^ (BYTE)nBit);
 						}
 						else if ((fixedC2[t] & nBit) == nBit) {
 							nC2ErrorBit++;
@@ -3340,7 +3340,7 @@ BOOL ReadCDOutOfRange(
 	}
 
 	// 1st session lead-out
-	_TCHAR appendNameA[23] = {};
+	_TCHAR appendNameA[34] = {};
 	UINT uiLastTrk = 0;
 	INT nStartLBA = 0;
 	INT nLastLBA = 0;

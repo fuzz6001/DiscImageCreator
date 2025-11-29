@@ -33,7 +33,7 @@ int GetTempPath(size_t size, char* buf)
 
 void _splitpath(const char* Path, char* Drive, char* Directory, char* Filename, char* Extension)
 {
-	char* CopyOfPath = (char*)Path;
+	const char* CopyOfPath = Path;
 	int Counter = 0;
 	int Last = 0;
 	int Rest = 0;
@@ -221,14 +221,47 @@ int MakeSureDirectoryPathExists(const char *dir)
 
 int PathRemoveFileSpec(char* path)
 {
-	size_t length = strlen(path);
-	for (size_t j = length - 1; j > 0; j--) {
-		if (path[j] == '/') {
-			path[j] = '\0';
-			break;
+	if (path == NULL)
+		return 0;
+
+	size_t len = strlen(path);
+	if (len == 0)
+		return 0;
+
+	// root "/" is ignore
+	if (len == 1 && path[0] == '/')
+		return 0;
+
+	// last '/' is skip
+	size_t i = len;
+	while (i > 0 && path[i - 1] == '/')
+		--i;
+
+	if (i == 0) {
+		// if string is "////" , it changed to "/"
+		path[0] = '/';
+		path[1] = '\0';
+		return 1;
+	}
+
+	// search last '/' before i
+	for (size_t j = i; j > 0; --j) {
+		if (path[j - 1] == '/') {
+			if (j == 1) {
+				// "/foo" -> "/"
+				path[1] = '\0';
+			}
+			else {
+				// "/foo/bar.txt" -> "/foo"
+				// "dir/file"      -> "dir"
+				path[j - 1] = '\0';
+			}
+			return 1;
 		}
 	}
-	return 1;
+
+	// '/' is nothing
+	return 0;
 }
 
 int PathRemoveExtension(char* path)

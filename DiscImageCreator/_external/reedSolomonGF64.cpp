@@ -100,7 +100,7 @@ void cdg_rs6_init(void)
 	for (int i = 0; i < GF_ORD; i++) {
 		gf_exp_tbl[i] = x;
 		gf_log_tbl[x] = (unsigned char)i;
-		x <<= 1;
+		x = (unsigned char)((x << 1) & 0xFF);
 		if (x & 0x40) {
 			x ^= GF_PRIM6; // mod p(x)
 		}
@@ -221,7 +221,7 @@ static int rs6_syndromes_asc(const unsigned char* r, int n, int m, unsigned char
 		unsigned char p = 1;
 		for (int j = 0; j < n; j++) {
 			if (r[j]) {
-				si ^= gf6_mul(r[j], p);
+				si = (unsigned char)((si ^ gf6_mul(r[j], p)) & 0xFF);
 			}
 			p = gf6_mul(p, a);
 		}
@@ -246,7 +246,7 @@ static int bm_solve_locator(const unsigned char* S, int m, unsigned char* Lambda
 		unsigned char d = S[n];
 		for (int i = 1; i <= L; i++) {
 			if (C[i] && S[n - i]) {
-				d ^= gf6_mul(C[i], S[n - i]);
+				d = (unsigned char)((d ^ gf6_mul(C[i], S[n - i])) & 0xFF);
 			}
 		}
 		if (d) {
@@ -255,7 +255,7 @@ static int bm_solve_locator(const unsigned char* S, int m, unsigned char* Lambda
 			unsigned char coef = gf6_div(d, b);
 			for (int i = 0; i < 8 - mstep; i++) {
 				if (B[i]) {
-					C[i + mstep] ^= gf6_mul(coef, B[i]);
+					C[i + mstep] = (unsigned char)((C[i + mstep] ^ gf6_mul(coef, B[i])) & 0xFF);
 				}
 			}
 			if (2 * L <= n) {
@@ -286,7 +286,7 @@ static int chien_search_asc(const unsigned char* Lambda, int L, int n, int* err_
 		unsigned char p = 1;
 		for (int i = 0; i <= L; i++) {
 			if (Lambda[i]) {
-				val ^= gf6_mul(Lambda[i], p);
+				val = (unsigned char)((val ^ gf6_mul(Lambda[i], p)) & 0xFF);
 			}
 			p = gf6_mul(p, xinv);
 		}
@@ -306,7 +306,7 @@ static void build_omega(const unsigned char* S, int m, const unsigned char* Lamb
 		}
 		for (int j = 0; j <= L && i + j < m; j++) {
 			if (Lambda[j]) {
-				Omega[i + j] ^= gf6_mul(S[i], Lambda[j]);
+				Omega[i + j] = (unsigned char)((Omega[i + j] ^ gf6_mul(S[i], Lambda[j])) & 0xFF);
 			}
 		}
 	}
@@ -318,7 +318,7 @@ static unsigned char eval_poly_asc(const unsigned char* poly, int deg, unsigned 
 	unsigned char p = 1;
 	for (int i = 0; i <= deg; i++) {
 		if (poly[i]) {
-			y ^= gf6_mul(poly[i], p);
+			y = (unsigned char)((y ^ gf6_mul(poly[i], p)) & 0xFF);
 		}
 		p = gf6_mul(p, x);
 	}
@@ -398,7 +398,7 @@ int rs6_p_correct(unsigned char code24[24])
 		unsigned char p = 1; // X^0
 		for (int i = 1; i <= L; i += 2) {
 			if (Lambda[i]) {
-				LpX ^= gf6_mul(Lambda[i], p);
+				LpX = (unsigned char)((LpX ^ gf6_mul(Lambda[i], p)) & 0xFF);
 			}
 			p = gf6_mul(p, gf6_mul(X, X)); // step by X^2
 		}
@@ -436,7 +436,7 @@ static void rs6_build_gamma_from_eras_asc(const int* eras, int e, unsigned char*
 		unsigned char nxt[8] = { 0 };
 		for (int i = 0; i <= t; i++) {
 			nxt[i] ^= Gamma[i];
-			nxt[i + 1] ^= gf6_mul(Gamma[i], Xi); // +Xi*x  (minus==plus)
+			nxt[i + 1] = (unsigned char)((nxt[i + 1] ^ gf6_mul(Gamma[i], Xi)) & 0xFF); // +Xi*x  (minus==plus)
 		}
 		memcpy(Gamma, nxt, (size_t)(e + 1));
 	}
@@ -451,7 +451,7 @@ static void rs6_apply_gamma_to_s(unsigned char* S, int m, const unsigned char* G
 		}
 		for (int j = 0; j <= e && i + j < m; j++) {
 			if (Gamma[j]) {
-				tmp[i + j] ^= gf6_mul(S[i], Gamma[j]);
+				tmp[i + j] = (unsigned char)((tmp[i + j] ^ gf6_mul(S[i], Gamma[j])) & 0xFF);
 			}
 		}
 	}
@@ -493,7 +493,7 @@ int rs6_p_correct_with_erasures(unsigned char code24[24], const int* eras, int e
 		}
 		for (int j = 0; j <= Lp && i + j < 8; j++) {
 			if (Lp_[j]) {
-				Lambda[i + j] ^= gf6_mul(Gamma[i], Lp_[j]);
+				Lambda[i + j] = (unsigned char)((Lambda[i + j] ^ gf6_mul(Gamma[i], Lp_[j])) & 0xFF);
 			}
 		}
 	}
@@ -518,7 +518,7 @@ int rs6_p_correct_with_erasures(unsigned char code24[24], const int* eras, int e
 		unsigned char LpX = 0, p = 1;
 		for (int i = 1; i <= L; i += 2) {
 			if (Lambda[i]) {
-				LpX ^= gf6_mul(Lambda[i], p);
+				LpX = (unsigned char)((LpX ^ gf6_mul(Lambda[i], p)) & 0xFF);
 			}
 			p = gf6_mul(p, gf6_mul(X, X));
 		}

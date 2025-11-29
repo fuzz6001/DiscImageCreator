@@ -249,5 +249,3 @@ BOOL IsSjis(
 	size_t stTxtIdx,
 	size_t stTmpTextLen
 );
-
-_TCHAR* find_last_string(const _TCHAR* s, const _TCHAR* target);
