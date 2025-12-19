@@ -39,21 +39,19 @@ BOOL GetAlignedCallocatedBuffer(
 BOOL GetHandle(
 	PDEVICE pDevice
 ) {
-#ifdef _WIN32
+#if defined(_WIN32)
 	CONST size_t bufSize = 8;
 	_TCHAR szBuf[bufSize] = {};
 	_sntprintf(szBuf, bufSize, _T("\\\\.\\%c:"), pDevice->byDriveLetter);
 	szBuf[7] = 0;
 	pDevice->hDevice = CreateFile(szBuf, GENERIC_READ | GENERIC_WRITE,
 		FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
-#elif __linux__
-	pDevice->hDevice = open(pDevice->drivepath, O_RDONLY | O_NONBLOCK, 0777);
-#elif __MACH__
-	pDevice->hDevice = GetSCSITaskInterface(pDevice->drivepath);
-#endif
-#if defined (_WIN32) || defined (__linux__)
 	if (pDevice->hDevice == INVALID_HANDLE_VALUE) {
-#elif __MACH__
+#elif defined(__linux__)
+	pDevice->hDevice = open(pDevice->drivepath, O_RDONLY | O_NONBLOCK, 0777);
+	if (pDevice->hDevice == -1) {
+#elif defined(__APPLE__) && defined(__MACH__)
+	pDevice->hDevice = GetSCSITaskInterface(pDevice->drivepath);
 	if (pDevice->hDevice == NULL) {
 #endif
 		OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);

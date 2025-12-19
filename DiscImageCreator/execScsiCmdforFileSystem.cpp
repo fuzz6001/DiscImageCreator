@@ -2129,7 +2129,7 @@ BOOL ReadWiiPartition(
 	return TRUE;
 }
 
-BOOL ReadBDForPs3DiscSfb(
+BOOL ReadPs3DiscSfb(
 	PEXT_ARG pExtArg,
 	PDEVICE pDevice,
 	PDISC pDisc,
@@ -2181,7 +2181,7 @@ BOOL ReadBDForPs3DiscSfb(
 	return TRUE;
 }
 
-BOOL ReadBDForPup(
+BOOL ReadPs3Pup(
 	PEXT_ARG pExtArg,
 	PDEVICE pDevice,
 	PDISC pDisc,
@@ -2366,7 +2366,7 @@ BOOL ReadBDForPup(
 	return TRUE;
 }
 
-BOOL ReadBDForParamSfo(
+BOOL ReadPs3ParamSfo(
 	PEXT_ARG pExtArg,
 	PDEVICE pDevice,
 	PDISC pDisc,
@@ -3173,7 +3173,7 @@ BOOL ReadSACDFileSystem(
 			OutputMainChannel(fileMainInfo, lpBuf, _T("Track_Text"), (INT)LBA.AsULong, DISC_MAIN_DATA_SIZE * (DWORD)track_text_sector);
 
 			for (int h = 0; h < aToc.Txt_Ch.Number_of_Text_Channels; h++) {
-				int nOfs = 0;
+				size_t nOfs = 0;
 				for (int i = 0; i < aToc.Number_of_Track; i++) {
 					if (TTxt.Track_Text_Item_Ptr[h][i]) {
 						OutputVolDescLog("\t     Number_of_Item[%d][%02d]: %02d\n"
@@ -3256,7 +3256,8 @@ BOOL ReadSACDFileSystem(
 								nOfs += 4 - nOfs % 4;
 							}
 						}
-						nOfs = TTxt.Track_Text_Item_Ptr[h][i + 1] - TTxt.Track_Text_Item_Ptr[h][0];
+						int diff = TTxt.Track_Text_Item_Ptr[h][i + 1] - TTxt.Track_Text_Item_Ptr[h][0];
+						nOfs = (size_t)diff;
 					}
 				}
 			}

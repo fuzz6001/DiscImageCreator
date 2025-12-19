@@ -781,25 +781,25 @@ int SetOptionFdesc(int argc, _TCHAR* argv[], PEXT_ARG pExtArg, int* i)
 {
 	if (argc > *i && _tcsncmp(argv[*i], _T("/"), 1)) {
 		if (!_tcsncmp(argv[*i], _T("sync"), 4)) {
-			argv[(*i)++];
+			(*i)++;
 			pExtArg->byForceDescramble = DESCRAMBLE_INVALID_SYNC;
 			if (argc > *i && _tcsncmp(argv[*i], _T("/"), 1)) {
 				if (!_tcsncmp(argv[*i], _T("edc"), 3)) {
-					argv[(*i)++];
+					(*i)++;
 					pExtArg->byForceDescramble |= DESCRAMBLE_INVALID_EDC;
 					if (argc > *i && _tcsncmp(argv[*i], _T("/"), 1)) {
 						if (!_tcsncmp(argv[*i], _T("ecc"), 3)) {
-							argv[(*i)++];
+							(*i)++;
 							pExtArg->byForceDescramble |= DESCRAMBLE_INVALID_ECC;
 						}
 					}
 				}
 				else if (!_tcsncmp(argv[*i], _T("ecc"), 3)) {
-					argv[(*i)++];
+					(*i)++;
 					pExtArg->byForceDescramble |= DESCRAMBLE_INVALID_ECC;
 					if (argc > *i && _tcsncmp(argv[*i], _T("/"), 1)) {
 						if (!_tcsncmp(argv[*i], _T("edc"), 3)) {
-							argv[(*i)++];
+							(*i)++;
 							pExtArg->byForceDescramble |= DESCRAMBLE_INVALID_EDC;
 						}
 					}
@@ -807,25 +807,25 @@ int SetOptionFdesc(int argc, _TCHAR* argv[], PEXT_ARG pExtArg, int* i)
 			}
 		}
 		else if (!_tcsncmp(argv[*i], _T("edc"), 3)) {
-			argv[(*i)++];
+			(*i)++;
 			pExtArg->byForceDescramble = DESCRAMBLE_INVALID_EDC;
 			if (argc > *i && _tcsncmp(argv[*i], _T("/"), 1)) {
 				if (!_tcsncmp(argv[*i], _T("sync"), 4)) {
-					argv[(*i)++];
+					(*i)++;
 					pExtArg->byForceDescramble |= DESCRAMBLE_INVALID_SYNC;
 					if (argc > *i && _tcsncmp(argv[*i], _T("/"), 1)) {
 						if (!_tcsncmp(argv[*i], _T("ecc"), 3)) {
-							argv[(*i)++];
+							(*i)++;
 							pExtArg->byForceDescramble |= DESCRAMBLE_INVALID_ECC;
 						}
 					}
 				}
 				else if (!_tcsncmp(argv[*i], _T("ecc"), 3)) {
-					argv[(*i)++];
+					(*i)++;
 					pExtArg->byForceDescramble |= DESCRAMBLE_INVALID_ECC;
 					if (argc > *i && _tcsncmp(argv[*i], _T("/"), 1)) {
 						if (!_tcsncmp(argv[*i], _T("sync"), 4)) {
-							argv[(*i)++];
+							(*i)++;
 							pExtArg->byForceDescramble |= DESCRAMBLE_INVALID_SYNC;
 						}
 					}
@@ -833,25 +833,25 @@ int SetOptionFdesc(int argc, _TCHAR* argv[], PEXT_ARG pExtArg, int* i)
 			}
 		}
 		else if (!_tcsncmp(argv[*i], _T("ecc"), 3)) {
-			argv[(*i)++];
+			(*i)++;
 			pExtArg->byForceDescramble = DESCRAMBLE_INVALID_ECC;
 			if (argc > *i && _tcsncmp(argv[*i], _T("/"), 1)) {
 				if (!_tcsncmp(argv[*i], _T("sync"), 4)) {
-					argv[(*i)++];
+					(*i)++;
 					pExtArg->byForceDescramble |= DESCRAMBLE_INVALID_SYNC;
 					if (argc > *i && _tcsncmp(argv[*i], _T("/"), 1)) {
 						if (!_tcsncmp(argv[*i], _T("edc"), 3)) {
-							argv[(*i)++];
+							(*i)++;
 							pExtArg->byForceDescramble |= DESCRAMBLE_INVALID_EDC;
 						}
 					}
 				}
 				else if (!_tcsncmp(argv[*i], _T("edc"), 3)) {
-					argv[(*i)++];
+					(*i)++;
 					pExtArg->byForceDescramble |= DESCRAMBLE_INVALID_EDC;
 					if (argc > *i && _tcsncmp(argv[*i], _T("/"), 1)) {
 						if (!_tcsncmp(argv[*i], _T("sync"), 4)) {
-							argv[(*i)++];
+							(*i)++;
 							pExtArg->byForceDescramble |= DESCRAMBLE_INVALID_SYNC;
 						}
 					}

@@ -234,12 +234,13 @@ BOOL ReadDVD(
 			}
 		}
 		else if (*pExecType == bd) {
+			BOOL bPs3DiscSfb = FALSE;
 			if (pDisc->BD.nLBAForPs3DiscSfb != 0) {
-				ReadBDForPs3DiscSfb(pExtArg, pDevice, pDisc, &cdb, lpBuf);
+				bPs3DiscSfb = ReadPs3DiscSfb(pExtArg, pDevice, pDisc, &cdb, lpBuf);
 			}
 			for (INT i = 0; i < MAX_PARAMSFO_NUM; i++) {
 				if (pDisc->BD.nLBAForParamSfo[i] != 0) {
-					if (!ReadBDForParamSfo(pExtArg, pDevice, pDisc, &cdb, lpBuf, i)) {
+					if (!ReadPs3ParamSfo(pExtArg, pDevice, pDisc, &cdb, lpBuf, i)) {
 						throw FALSE;
 					}
 				}
@@ -247,8 +248,9 @@ BOOL ReadDVD(
 					break;
 				}
 			}
+			BOOL bPs3DiscPup = FALSE;
 			if (pDisc->BD.nLBAForPup != 0) {
-				ReadBDForPup(pExtArg, pDevice, pDisc, &cdb, lpBuf);
+				bPs3DiscPup = ReadPs3Pup(pExtArg, pDevice, pDisc, &cdb, lpBuf);
 			}
 		}
 		FlushLog();

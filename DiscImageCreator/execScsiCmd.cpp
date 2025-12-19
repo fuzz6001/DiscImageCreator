@@ -844,7 +844,7 @@ BOOL SendKey(
 	cdb.AGID = (BYTE)(agid & 0x3);
 
 #ifdef _WIN32
-	INT direction = SCSI_IOCTL_DATA_IN;
+	INT direction = SCSI_IOCTL_DATA_OUT;
 #else
 	INT direction = SG_DXFER_TO_DEV;
 #endif
@@ -989,7 +989,7 @@ BOOL SetStreaming(
 #ifdef _WIN32
 	INT direction = SCSI_IOCTL_DATA_OUT;
 #else
-	INT direction = SG_DXFER_FROM_DEV;
+	INT direction = SG_DXFER_TO_DEV;
 #endif
 	BYTE byScsiStatus = 0;
 	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB12GENERIC_LENGTH

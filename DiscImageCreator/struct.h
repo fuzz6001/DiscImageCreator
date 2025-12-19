@@ -235,11 +235,11 @@ typedef struct _EXT_ARG {
 } EXT_ARG, *PEXT_ARG;
 
 typedef struct _DEVICE {
-#ifdef _WIN32
+#if defined(_WIN32)
 	HANDLE hDevice;
-#elif __linux__
+#elif defined(__linux__)
 	int hDevice;
-#elif __MACH__
+#elif defined(__APPLE__) && defined(__MACH__)
 	SCSITaskInterface** hDevice;
 #endif
 	SCSI_ADDRESS address;
@@ -252,11 +252,11 @@ typedef struct _DEVICE {
 	BYTE byPlxtrDrive;
 	BYTE by0xF1Drive;
 	BYTE byLoadingMechanism;
-#ifdef _WIN32
+#if defined(_WIN32)
 	BYTE byDriveLetter;
-#elif __linux__
+#elif defined(__linux__)
 	CHAR drivepath[10];
-#elif __MACH__
+#elif defined(__APPLE__) && defined(__MACH__)
 	CHAR drivepath[512];
 #endif
 	BOOL bCanReadLeadout;

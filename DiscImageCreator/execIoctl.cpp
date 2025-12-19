@@ -148,11 +148,11 @@ BOOL Read10(
 }
 
 BOOL ReadFATDirectoryRecord(
-#ifdef _WIN32
+#if defined(_WIN32)
 	HANDLE handle,
-#elif __linux__
+#elif defined(__linux__)
 	int handle,
-#elif __MACH__
+#elif defined(__APPLE__) && defined(__MACH__)
 	SCSITaskInterface** handle,
 #endif
 	LARGE_INTEGER seekPos,
@@ -223,11 +223,11 @@ BOOL ReadFATDirectoryRecord(
 }
 
 BOOL ReadExFATDirectoryEntry(
-#ifdef _WIN32
+#if defined(_WIN32)
 	HANDLE handle,
-#elif __linux__
+#elif defined(__linux__)
 	int handle,
-#elif __MACH__
+#elif defined(__APPLE__) && defined(__MACH__)
 	SCSITaskInterface** handle,
 #endif
 	DWORD dwBytesPerSector,
@@ -455,12 +455,12 @@ BOOL DVDGetRegion(
 	PDEVICE pDevice
 ) {
 	DVD_REGION dvdRegion = {};
-#ifdef _WIN32
+#if defined(_WIN32)
 	DWORD dwReturned = 0;
 	BOOL bRet = DeviceIoControl(pDevice->hDevice,
 		IOCTL_DVD_GET_REGION, &dvdRegion, sizeof(DVD_REGION),
 		&dvdRegion, sizeof(DVD_REGION), &dwReturned, NULL);
-#elif __linux__
+#elif defined(__linux__)
 	dvd_authinfo auth_info;
 
 	memset(&auth_info, 0, sizeof(auth_info));
@@ -469,7 +469,7 @@ BOOL DVDGetRegion(
 	int bRet = ioctl(pDevice->hDevice, DVD_AUTH, &auth_info);
 	dvdRegion.SystemRegion = auth_info.lrpcs.region_mask;
 	dvdRegion.ResetCount = auth_info.lrpcs.type;
-#elif __MACH__
+#elif defined(__APPLE__) && defined(__MACH__)
 	int bRet = 0;
 #endif
 	if (bRet) {
@@ -512,7 +512,7 @@ BOOL ScsiPassThroughDirect(
 	BOOL bOutputMsg
 ) {
 	SCSI_PASS_THROUGH_DIRECT_WITH_BUFFER swb = {};
-#ifdef _WIN32
+#if defined(_WIN32)
 	swb.Sptd.Length = sizeof(SCSI_PASS_THROUGH_DIRECT);
 	swb.Sptd.PathId = pDevice->address.PathId;
 	swb.Sptd.TargetId = pDevice->address.TargetId;
@@ -526,7 +526,7 @@ BOOL ScsiPassThroughDirect(
 	swb.Sptd.SenseInfoOffset =
 		offsetof(SCSI_PASS_THROUGH_DIRECT_WITH_BUFFER, SenseData);
 	memcpy(swb.Sptd.Cdb, lpCdb, byCdbLength);
-#elif __linux__
+#elif defined(__linux__)
 	swb.io_hdr.interface_id = 'S';
 	swb.io_hdr.dxfer_direction = nDataDirection;
 	swb.io_hdr.cmd_len = byCdbLength;
@@ -537,7 +537,7 @@ BOOL ScsiPassThroughDirect(
 	swb.io_hdr.sbp = swb.Dummy;
 	swb.io_hdr.timeout = (unsigned int)pDevice->dwTimeOutValue;
 //	swb.io_hdr.flags = SG_FLAG_DIRECT_IO;
-#elif __MACH__
+#elif defined(__APPLE__) && defined(__MACH__)
 	// https://developer.apple.com/library/archive/documentation/DeviceDrivers/Conceptual/WorkingWithSAM/WWS_SAMDevInt/WWS_SAM_DevInt.html#//apple_ref/doc/uid/TP30000387-SW1
 	IOReturn         err  = 0;
 	IOVirtualRange* range = NULL;
@@ -599,7 +599,7 @@ BOOL ScsiPassThroughDirect(
 			swb.SenseData.AdditionalSenseCodeQualifier == 0x00) {
 			bNoSense = TRUE;
 		}
-#ifdef _WIN32
+#if defined(_WIN32)
 		if (swb.Sptd.ScsiStatus >= SCSISTAT_CHECK_CONDITION && !bNoSense) {
 			INT nLBA = 0;
 			if (swb.Sptd.Cdb[0] == 0x28 || swb.Sptd.Cdb[0] == 0xa8 || swb.Sptd.Cdb[0] == 0xad ||
@@ -613,7 +613,7 @@ BOOL ScsiPassThroughDirect(
 					, nLBA, nLBA, pszFuncName, lLineNum, swb.Sptd.Cdb[0]);
 				OutputScsiStatus(swb.Sptd.ScsiStatus);
 			}
-#elif __linux__
+#elif defined(__linux__)
 		if (swb.io_hdr.status >= SCSISTAT_CHECK_CONDITION && !bNoSense) {
 			INT nLBA = 0;
 			if (swb.io_hdr.cmdp[0] == 0xa8 || swb.io_hdr.cmdp[0] == 0xad ||
@@ -627,7 +627,7 @@ BOOL ScsiPassThroughDirect(
 					, nLBA, (UINT)nLBA, pszFuncName, lLineNum, swb.io_hdr.cmdp[0]);
 				OutputScsiStatus(swb.io_hdr.status);
 			}
-#elif __MACH__
+#elif defined(__APPLE__) && defined(__MACH__)
 		if (swb.taskStatus >= SCSISTAT_CHECK_CONDITION && !bNoSense) {
 #endif
 			if (bOutputMsg) {
@@ -645,11 +645,11 @@ BOOL ScsiPassThroughDirect(
 		*byScsiStatus = SCSISTAT_GOOD;
 	}
 	else {
-#ifdef _WIN32
+#if defined(_WIN32)
 		*byScsiStatus = swb.Sptd.ScsiStatus;
-#elif __linux__
+#elif defined(__linux__)
 		*byScsiStatus = swb.io_hdr.status;
-#elif __MACH__
+#elif defined(__APPLE__) && defined(__MACH__)
 		*byScsiStatus = swb.taskStatus;
 		FreeAndNull(range);
 #endif
