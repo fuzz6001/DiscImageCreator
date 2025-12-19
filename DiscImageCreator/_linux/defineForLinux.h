@@ -67,10 +67,10 @@ typedef unsigned long long DWORD64, *PDWORD64;
 #define CP_UTF8                   65001       // UTF-8 translation
 
 // from WinDef.h
-#ifdef __linux__
+#if defined(__linux__)
 typedef unsigned long ULONG;
-#elif __MACH__
-#include <CoreFoundation.framework/Headers/CFPlugInCOM.h>
+#elif defined(__APPLE__) && defined(__MACH__)
+#include <CoreFoundation/CFPlugInCOM.h>
 #endif
 typedef ULONG *PULONG;
 typedef unsigned short USHORT;
@@ -786,7 +786,7 @@ typedef struct tagVS_FIXEDFILEINFO
 } VS_FIXEDFILEINFO;
 
 // from WinBase.h
-#define INVALID_HANDLE_VALUE	-1
+#define INVALID_HANDLE_VALUE	((HANDLE)-1)
 
 #define FillMemory RtlFillMemory
 #define ZeroMemory RtlZeroMemory
@@ -2237,19 +2237,19 @@ typedef struct _AACS_READ_BINDING_NONCE {
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <sys/statvfs.h>
-#ifdef __linux__
+#if defined(__linux__)
 #include <linux/cdrom.h>
 #include <linux/iso_fs.h>
 #include <linux/mmc/ioctl.h>
 #include <scsi/scsi.h>
 #include <scsi/sg.h>
-#elif __MACH__
-#include <CoreFoundation.framework/Headers/CFPlugIn.h>
-#include <CoreFoundation.framework/Headers/CFUUID.h>
-#include <CoreFoundation.framework/Headers/CoreFoundation.h>
-#include <IOKit.framework/Headers/IOBSD.h>
-#include <IOKit.framework/Headers/IOKitLib.h>
-#include <IOKit.framework/Headers/scsi/SCSITaskLib.h>
+#elif defined(__APPLE__) && defined(__MACH__)
+#include <CoreFoundation/CFPlugIn.h>
+#include <CoreFoundation/CFUUID.h>
+#include <CoreFoundation/CoreFoundation.h>
+#include <IOKit/IOBSD.h>
+#include <IOKit/IOKitLib.h>
+#include <IOKit/scsi/SCSITaskLib.h>
 #define ENUM_DYLD_BOOL 1
 #include <mach-o/dyld.h>
 #endif
@@ -2376,7 +2376,7 @@ typedef struct _STORAGE_ADAPTER_DESCRIPTOR {
 
 } STORAGE_ADAPTER_DESCRIPTOR, *PSTORAGE_ADAPTER_DESCRIPTOR;
 
-#ifdef __linux__
+#if defined(__linux__)
 #define IOCTL_SCSI_PASS_THROUGH_DIRECT	SG_IO
 #define IOCTL_DISK_GET_DRIVE_GEOMETRY	SG_IO
 #define IOCTL_DISK_GET_MEDIA_TYPES		SG_IO
@@ -2384,7 +2384,7 @@ typedef struct _STORAGE_ADAPTER_DESCRIPTOR {
 #define IOCTL_STORAGE_QUERY_PROPERTY	SG_IO
 #define IOCTL_STORAGE_GET_MEDIA_TYPES_EX	SG_IO
 #define IOCTL_DISK_GET_DRIVE_GEOMETRY_EX	SG_IO
-#elif __MACH__
+#elif defined(__APPLE__) && defined(__MACH__)
 #define IOCTL_SCSI_PASS_THROUGH_DIRECT	0
 #define IOCTL_DISK_GET_DRIVE_GEOMETRY	0
 #define IOCTL_DISK_GET_MEDIA_TYPES		0
@@ -2399,10 +2399,10 @@ typedef struct _STORAGE_ADAPTER_DESCRIPTOR {
 #endif
 
 typedef struct _SCSI_PASS_THROUGH_DIRECT_WITH_BUFFER {
-#ifdef __linux__
+#if defined(__linux__)
 	sg_io_hdr_t io_hdr;
 	unsigned char Dummy[18];
-#elif __MACH__
+#elif defined(__APPLE__) && defined(__MACH__)
 	SCSITaskStatus taskStatus;
 	SCSITaskInterface** task;
 	UInt64 transferCount;
@@ -2417,7 +2417,7 @@ int Beep(int fz, int time);
 
 int GetCurrentDirectory(size_t size, char *buf);
 
-int GetTempPath(size_t size, char* buf);
+DWORD GetTempPath(DWORD nBufferLength, LPTSTR lpBuffer);
 
 // https://groups.google.com/forum/#!topic/gnu.gcc.help/0dKxhmV4voE
 // Abstract:   split a path into its parts
@@ -2484,7 +2484,7 @@ void SetLastError(int errcode);
 int GetLastError(void);
 
 #define FILE_BEGIN SEEK_SET
-#ifdef __linux__
+#if defined(__linux__)
 int CloseHandle(int fd);
 
 int DeviceIoControl(int fd, unsigned long ioCtlCode, void* inbuf
@@ -2495,7 +2495,7 @@ int ReadFile(int fd, void* inbuf, unsigned long size, unsigned long* d, void* e)
 off_t SetFilePointer(int fd, off_t pos, void* a, int origin);
 
 off64_t SetFilePointerEx(int fd, LARGE_INTEGER pos, void* a, int origin);
-#elif __MACH__
+#elif defined(__APPLE__) && defined(__MACH__)
 SCSITaskInterface** GetSCSITaskInterface(char* path);
 
 int CloseHandle(SCSITaskInterface** task);
@@ -2513,9 +2513,82 @@ off64_t SetFilePointerEx(SCSITaskInterface** task, LARGE_INTEGER pos, void* a, i
 
 unsigned int Sleep(unsigned long seconds);
 
-#ifdef __MACH__
+#if defined(__APPLE__) && defined(__MACH__)
 #define statvfs64 statvfs
 #endif
 int GetDiskFreeSpaceEx(LPCSTR lpDirectoryName, PULARGE_INTEGER lpFreeBytesAvailableToCaller, PULARGE_INTEGER lpTotalNumberOfBytes, PULARGE_INTEGER lpTotalNumberOfFreeBytes);
 
+#endif
+
+enum {
+	SPFILENOTIFY_CABINETINFO = 0x0010,
+	SPFILENOTIFY_FILEINCABINET = 0x0011,
+	SPFILENOTIFY_FILEEXTRACTED = 0x0012,
+	SPFILENOTIFY_NEEDNEWCABINET = 0x0013,
+	SPFILENOTIFY_FILEOPDELAYED = 0x0014
+};
+
+enum {
+	FILEOP_ABORT = 0,
+	FILEOP_DOIT = 1,
+	FILEOP_SKIP = 2
+};
+
+typedef struct _FILE_IN_CABINET_INFO_A {
+	const char* NameInCabinet;
+	DWORD       FileSize;
+	DWORD       Win32Error;
+	WORD        DosDate;
+	WORD        DosTime;
+	WORD        DosAttribs;
+	char        FullTargetName[_MAX_PATH];
+} FILE_IN_CABINET_INFO_A, FILE_IN_CABINET_INFO;
+
+typedef struct _FILEPATHS_A {
+	const char* Target;
+	const char* Source;
+	UINT        Win32Error;
+	DWORD       Flags;
+} FILEPATHS_A, FILEPATHS;
+
+#include <dirent.h>
+#include <fnmatch.h>
+#include <archive.h>
+#include <archive_entry.h>
+
+#define FILE_ATTRIBUTE_READONLY   0x00000001
+#define FILE_ATTRIBUTE_DIRECTORY  0x00000010
+
+typedef struct _WIN32_FIND_DATAA_LINUX {
+	DWORD   dwFileAttributes;
+	LONGLONG nFileSize;
+	char    cFileName[PATH_MAX];
+} WIN32_FIND_DATAA;
+
+#define WIN32_FIND_DATA WIN32_FIND_DATAA
+
+typedef struct _FIND_HANDLE {
+	int single_done;
+	DIR* dir;
+	char dirpath[PATH_MAX];
+	char pattern[PATH_MAX];
+} FIND_HANDLE_INTERNAL;
+
+#define FindFirstFile FindFirstFileA
+#define FindNextFile FindNextFileA
+#define DeleteFile DeleteFileA
+#define RemoveDirectory RemoveDirectoryA
+#define SetFileAttributes SetFileAttributesA
+
+HANDLE FindFirstFileA(const char* lpFileName, WIN32_FIND_DATA* lpFindFileData);
+BOOL FindNextFileA(HANDLE hFindFile, WIN32_FIND_DATA* lpFindFileData);
+BOOL FindClose(HANDLE hFindFile);
+BOOL DeleteFileA(const char* lpFileName);
+BOOL RemoveDirectoryA(const char* lpPathName);
+BOOL SetFileAttributesA(const char* lpFileName, DWORD dwFileAttributes);
+
+#ifdef UNICODE
+#define _tcscasestr strcasestrW
+#else
+#define _tcscasestr strcasestr
 #endif

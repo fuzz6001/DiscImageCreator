@@ -7,13 +7,23 @@ project(
 
 conf_data = configuration_data()
 
-if target_machine.system().contains('linux') or target_machine.system().contains('darwin')
+if target_machine.system() in ['linux', 'darwin']
   build_date = run_command('date', '+%Y%m%d').stdout().strip()
   build_time = run_command('date', '+%H%M%S').stdout().strip()
+  libarchive_dep = dependency('libarchive', required: true, method: 'pkg-config')
+  add_project_arguments('-include', 'defineForLinux.h', language : 'cpp')
+  inc = [include_directories('DiscImageCreator/'), include_directories('DiscImageCreator/_linux')]
 endif
 
-if target_machine.system().contains('linux')
-  add_project_arguments('-include', 'defineForLinux.h', language : 'cpp')
+deps = [libarchive_dep]
+
+if host_machine.system() == 'darwin'
+  applefw_dep = dependency(
+    'appleframeworks',
+    modules: ['CoreFoundation', 'IOKit'],
+    required: true
+  )
+  deps += applefw_dep
 endif
 
 conf_data.set('build_date', build_date)
@@ -30,18 +40,17 @@ executable(
   sources: [
     builddatetime_h,
     'DiscImageCreator/DiscImageCreator.cpp',
-    'DiscImageCreator/_external/NonStandardFunction.cpp',
     'DiscImageCreator/_external/abgx360.cpp',
     'DiscImageCreator/_external/aes.cpp',
     'DiscImageCreator/_external/aesni.cpp',
     'DiscImageCreator/_external/crc16ccitt.cpp',
     'DiscImageCreator/_external/crc32.cpp',
-    'DiscImageCreator/_external/crc32ecma267.cpp',
-    'DiscImageCreator/_external/crc6itu.cpp',
     'DiscImageCreator/_external/ECCEDC.cpp',
     'DiscImageCreator/_external/md5c.cpp',
+    'DiscImageCreator/_external/NonStandardFunction.cpp',
     'DiscImageCreator/_external/platform_util.cpp',
     'DiscImageCreator/_external/prngcd.cpp',
+    'DiscImageCreator/_external/reedSolomonGF64.cpp',
     'DiscImageCreator/_external/rijndael-alg-fst.cpp',
     'DiscImageCreator/_external/sha1.cpp',
     'DiscImageCreator/_external/sha224-256.cpp',
@@ -71,7 +80,8 @@ executable(
     'DiscImageCreator/set.cpp',
     'DiscImageCreator/xml.cpp',
   ],
-  include_directories: 'DiscImageCreator/_linux',
+  include_directories: inc,
+  dependencies: deps,
   cpp_args: ['-Wno-unknown-pragmas'],
   install: true,
   install_dir: get_option('bindir'),

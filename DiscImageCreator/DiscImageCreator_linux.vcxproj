@@ -66,9 +66,14 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ProjectPublicIncludePath>
     </ProjectPublicIncludePath>
-    <IncludePath>
-    </IncludePath>
+    <IncludePath>$(MSBuildProjectDirectory);$(IncludePath)</IncludePath>
     <TargetName>DiscImageCreator</TargetName>
+    <LibraryPath>
+    </LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <TargetName>DiscImageCreator</TargetName>
+    <IncludePath>$(MSBuildProjectDirectory);$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemGroup>
     <ClCompile Include="calcHash.cpp" />
@@ -106,6 +111,7 @@
     <ClCompile Include="_external\NonStandardFunction.cpp" />
     <ClCompile Include="_external\platform_util.cpp" />
     <ClCompile Include="_external\prngcd.cpp" />
+    <ClCompile Include="_external\reedSolomonGF64.cpp" />
     <ClCompile Include="_external\rijndael-alg-fst.cpp" />
     <ClCompile Include="_external\sha1.cpp" />
     <ClCompile Include="_external\sha224-256.cpp" />
@@ -160,6 +166,7 @@
     <ClInclude Include="_external\md5.h" />
     <ClInclude Include="_external\NonStandardFunction.h" />
     <ClInclude Include="_external\prngcd.h" />
+    <ClInclude Include="_external\reedSolomonGF64.h" />
     <ClInclude Include="_external\rijndael-alg-fst.h" />
     <ClInclude Include="_external\sha-private.h" />
     <ClInclude Include="_external\sha.h" />
@@ -174,7 +181,7 @@
     <ClCompile>
       <ForcedIncludeFiles>$(ProjectDir)_linux/defineForLinux.h</ForcedIncludeFiles>
       <CAdditionalWarning>extra;no-unknown-pragmas;%(CAdditionalWarning)</CAdditionalWarning>
-      <CppAdditionalWarning>extra;no-unknown-pragmas;aggregate-return;cast-align;cast-qual;conditionally-supported;disabled-optimization;double-promotion;float-equal;format=2;format-signedness;init-self;inline;invalid-pch;logical-op;missing-include-dirs;multichar;noexcept;overlength-strings;packed;pointer-arith;redundant-decls;shadow;stack-protector;strict-aliasing=2;strict-null-sentinel;switch-default;switch-enum;trampolines;variadic-macros;vector-operation-performance;write-strings;unused-macros;%(CppAdditionalWarning)</CppAdditionalWarning>
+      <CppAdditionalWarning>extra;no-unknown-pragmas;cast-align;cast-qual;conditionally-supported;disabled-optimization;double-promotion;float-equal;format=2;format-signedness;init-self;inline;invalid-pch;logical-op;missing-include-dirs;multichar;noexcept;overlength-strings;packed;pointer-arith;redundant-decls;shadow;stack-protector;strict-aliasing=2;strict-null-sentinel;switch-default;switch-enum;trampolines;variadic-macros;vector-operation-performance;write-strings;unused-macros;%(CppAdditionalWarning)</CppAdditionalWarning>
       <Optimization>MaxSpeed</Optimization>
       <DebugInformationFormat>None</DebugInformationFormat>
     </ClCompile>
@@ -184,6 +191,10 @@
     <PreBuildEvent>
       <Message>CreateBuildDateTime.h</Message>
     </PreBuildEvent>
+    <Link>
+      <AdditionalDependencies>-larchive;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>/usr/lib/x86_64-linux-gnu;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -191,6 +202,9 @@
       <CAdditionalWarning>no-unknown-pragmas;%(CAdditionalWarning)</CAdditionalWarning>
       <CppAdditionalWarning>no-unknown-pragmas;%(CppAdditionalWarning)</CppAdditionalWarning>
     </ClCompile>
+    <Link>
+      <AdditionalDependencies>-larchive;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

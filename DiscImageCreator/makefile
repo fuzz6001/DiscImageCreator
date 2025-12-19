@@ -1,30 +1,31 @@
 TARGET := DiscImageCreator
 ifeq ($(shell uname),Linux)
   INCFLAGS := -I. -I_external -I_linux
+  LIBS := -larchive
 else ifeq ($(shell uname),Darwin)
-  INCFLAGS := -I. -I_external -I_linux -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks
-  LIBS := -framework CoreFoundation -framework IOKit
- # LDFLAGS := -sectcreate __TEXT __info_plist Info.plist
+  INCFLAGS := -I. -I_external -I_linux -I$(shell brew --prefix libarchive)/include
+  LIBS := -larchive
+  LDFLAGS := -framework CoreFoundation -framework IOKit
 endif
 CFLAGS := -include _linux/defineForLinux.h
 CXXFLAGS := $(CFLAGS) -std=c++11
 
 ifneq ($(SANITIZER),)
-   CFLAGS   := -fsanitize=$(SANITIZER) $(CFLAGS)
-   CXXFLAGS := -fsanitize=$(SANITIZER) $(CXXFLAGS)
-   LDFLAGS  := -fsanitize=$(SANITIZER) $(LDFLAGS)
+  CFLAGS   := -fsanitize=$(SANITIZER) $(CFLAGS)
+  CXXFLAGS := -fsanitize=$(SANITIZER) $(CXXFLAGS)
+  LDFLAGS  := -fsanitize=$(SANITIZER) $(LDFLAGS)
 endif
 
 ifeq ($(DEBUG), 1)
-	CFLAGS += -O0 -g
-	CXXFLAGS += -O0 -g
+  CFLAGS += -O0 -g
+  CXXFLAGS += -O0 -g
 else
-	CFLAGS += -O2 -Wall -Wextra -Wno-unknown-pragmas
+  CFLAGS += -O2 -Wall -Wextra -Wno-unknown-pragmas
   ifeq ($(shell uname),Linux)
-	  CXXFLAGS += -O2 -Wall -Wextra -Wno-unknown-pragmas -Waggregate-return -Wcast-align -Wcast-qual -Wconditionally-supported -Wdisabled-optimization -Wdouble-promotion -Wfloat-equal -Wformat=2 -Wformat-signedness -Winit-self -Winline -Winvalid-pch -Wlogical-op -Wmissing-include-dirs -Wmultichar -Wnoexcept -Woverlength-strings -Wpacked -Wpointer-arith -Wredundant-decls -Wshadow -Wstack-protector -Wstrict-aliasing=2 -Wstrict-null-sentinel -Wswitch-default -Wswitch-enum -Wtrampolines -Wvariadic-macros -Wvector-operation-performance -Wwrite-strings -Wunused-macros
+    CXXFLAGS += -O2 -Wall -Wextra -Wno-unknown-pragmas -Wcast-align -Wcast-qual -Wconditionally-supported -Wdisabled-optimization -Wdouble-promotion -Wfloat-equal -Wformat=2 -Wformat-signedness -Winit-self -Winline -Winvalid-pch -Wlogical-op -Wmissing-include-dirs -Wmultichar -Wnoexcept -Woverlength-strings -Wpacked -Wpointer-arith -Wredundant-decls -Wshadow -Wstack-protector -Wstrict-aliasing=2 -Wstrict-null-sentinel -Wswitch-default -Wswitch-enum -Wtrampolines -Wvariadic-macros -Wvector-operation-performance -Wwrite-strings -Wunused-macros
   else ifeq ($(shell uname),Darwin)
-	  CXXFLAGS += -O2 -Wall -Wextra -Wno-unknown-pragmas -Waggregate-return -Wcast-align -Wcast-qual -Wdisabled-optimization -Wdouble-promotion -Wfloat-equal -Wformat=2 -Winit-self -Winline -Winvalid-pch -Wmissing-include-dirs -Wmultichar -Woverlength-strings -Wpacked -Wpointer-arith -Wredundant-decls -Wshadow -Wstack-protector -Wstrict-aliasing=2 -Wswitch-default -Wswitch-enum -Wvariadic-macros -Wwrite-strings -Wunused-macros
-  endif  
+    CXXFLAGS += -O2 -Wall -Wextra -Wno-unknown-pragmas -Wcast-align -Wcast-qual -Wdisabled-optimization -Wdouble-promotion -Wfloat-equal -Wformat=2 -Winit-self -Winline -Winvalid-pch -Wmissing-include-dirs -Wmultichar -Woverlength-strings -Wpacked -Wpointer-arith -Wredundant-decls -Wshadow -Wstack-protector -Wstrict-aliasing=2 -Wswitch-default -Wswitch-enum -Wvariadic-macros -Wwrite-strings -Wunused-macros
+  endif
 endif
 
 SOURCES_CXX := \
@@ -51,8 +52,8 @@ SOURCES_CXX := \
   set.o \
   xml.o \
   _external/abgx360.o \
-  _external/aesni.o \
   _external/aes.o \
+  _external/aesni.o \
   _external/crc16ccitt.o \
   _external/crc32.o \
   _external/ECCEDC.o \
@@ -60,11 +61,12 @@ SOURCES_CXX := \
   _external/NonStandardFunction.o \
   _external/platform_util.o \
   _external/prngcd.o \
+  _external/reedSolomonGF64.o \
   _external/rijndael-alg-fst.o \
-  _external/tinyxml2.o \
   _external/sha1.o \
   _external/sha224-256.o \
   _external/sha384-512.o \
+  _external/tinyxml2.o \
   _external/xxhash.o \
   _linux/defineForLinux.o
 
@@ -99,7 +101,7 @@ buildDateTime:
 	$(shell /usr/bin/env echo "\"" >>buildDateTime.h)
 
 ifeq ($(PREFIX),)
-    PREFIX := /usr/local
+  PREFIX := /usr/local
 endif
 
 install:

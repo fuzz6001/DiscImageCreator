@@ -1562,8 +1562,128 @@ LONG GetOfsOfSecuromDllSig(
 	return MAKELONG(MAKEWORD(lpBuf[i + 82], lpBuf[i + 83]), MAKEWORD(lpBuf[i + 84], lpBuf[i + 85]));
 }
 
-#ifdef _WIN32
+#ifndef _WIN32
+static int extract_current_entry_to_file(struct archive* a, const char* out_path)
+{
+	FILE* f = fopen(out_path, "wb");
+	if (!f) return -1;
+
+	char buf[8192];
+	ssize_t r;
+	while ((r = archive_read_data(a, buf, sizeof(buf))) > 0) {
+		if (fwrite(buf, 1, (size_t)r, f) != (size_t)r) {
+			fclose(f);
+			return -1;
+		}
+	}
+	fclose(f);
+	return (r < 0) ? -1 : 0;
+}
+
+int MySetupIterateCabinetA(
+	const char* cabinetFile,
+	MY_PSP_FILE_CALLBACK callback,
+	void* context
+) {
+	struct archive* a = NULL;
+	struct archive_entry* entry = NULL;
+	int r = ARCHIVE_OK;
+	int ret = -1;
+
+	a = archive_read_new();
+	if (!a) return -1;
+
+	archive_read_support_format_cab(a);
+	archive_read_support_filter_all(a);
+
+	if (archive_read_open_filename(a, cabinetFile, 10240) != ARCHIVE_OK) {
+		goto cleanup;
+	}
+
+	while ((r = archive_read_next_header(a, &entry)) == ARCHIVE_OK) {
+		const char* name = archive_entry_pathname(entry);
+		la_int64_t size = archive_entry_size(entry);
+		mode_t mode = archive_entry_mode(entry);
+
+		if (S_ISDIR(mode)) {
+			continue;
+		}
+
+		FILE_IN_CABINET_INFO info;
+		memset(&info, 0, sizeof(info));
+		info.NameInCabinet = name;
+		info.FileSize = (size > 0) ? (DWORD)size : 0;
+		info.Win32Error = 0;
+		info.DosDate = 0;
+		info.DosTime = 0;
+		info.DosAttribs = 0;
+
+		strncpy(info.FullTargetName, name, _MAX_PATH - 1);
+		info.FullTargetName[_MAX_PATH - 1] = '\0';
+
+		unsigned int cb_ret = callback(
+			context,
+			SPFILENOTIFY_FILEINCABINET,
+			(uintptr_t)&info,
+			(uintptr_t)cabinetFile
+		);
+
+		if (cb_ret == FILEOP_SKIP) {
+			continue;
+		}
+		else if (cb_ret == FILEOP_ABORT) {
+			ret = -1;
+			goto cleanup;
+		}
+		else if (cb_ret != FILEOP_DOIT) {
+			continue;
+		}
+
+		if (extract_current_entry_to_file(a, info.FullTargetName) != 0) {
+			FILEPATHS paths;
+			paths.Source = cabinetFile;
+			paths.Target = info.FullTargetName;
+			paths.Win32Error = 1;
+			paths.Flags = 0;
+
+			callback(context,
+				SPFILENOTIFY_FILEEXTRACTED,
+				(uintptr_t)&paths,
+				0);
+			ret = -1;
+			goto cleanup;
+		}
+		else {
+			FILEPATHS paths;
+			paths.Source = cabinetFile;
+			paths.Target = info.FullTargetName;
+			paths.Win32Error = 0;
+			paths.Flags = 0;
+
+			callback(context,
+				SPFILENOTIFY_FILEEXTRACTED,
+				(uintptr_t)&paths,
+				0);
+		}
+	}
+
+	if (r == ARCHIVE_EOF) {
+		ret = 0;
+	}
+
+cleanup:
+	if (a) {
+		archive_read_close(a);
+		archive_read_free(a);
+	}
+	return ret;
+}
+#endif
+#if defined(_WIN32)
 extern "C" UINT CALLBACK CabinetCallback(
+#else
+UINT CabinetCallback(
+#endif
 	PVOID pMyInstallData,
 	UINT  Notification,
 	UINT_PTR Param1,
@@ -1571,27 +1691,34 @@ extern "C" UINT CALLBACK CabinetCallback(
 ) noexcept {
 	UNREFERENCED_PARAMETER(Param2);
 	UINT lRetVal = NO_ERROR;
-	TCHAR szTarget[_MAX_PATH];
+	_TCHAR szTarget[_MAX_PATH];
 	FILE_IN_CABINET_INFO *pInfo = NULL;
+#if defined(_DEBUG) || !defined(NDEBUG)
 	FILEPATHS *pFilePaths = NULL;
-
+#endif
 	memcpy(szTarget, pMyInstallData, _MAX_PATH);
 	switch (Notification) {
 	case SPFILENOTIFY_CABINETINFO:
 		break;
 	case SPFILENOTIFY_FILEINCABINET:
 		pInfo = (FILE_IN_CABINET_INFO *)Param1;
-		lstrcat(szTarget, pInfo->NameInCabinet);
-		lstrcpy(pInfo->FullTargetName, szTarget);
+		_tcscat(szTarget, pInfo->NameInCabinet);
+		_tcscpy(pInfo->FullTargetName, szTarget);
+#if defined(_DEBUG) || !defined(NDEBUG)
+//		printf("FILEINCABINET source: %s, target: %s\n", pInfo->FullTargetName, pInfo->NameInCabinet);
+#endif
 		lRetVal = FILEOP_DOIT;  // Extract the file.
 		break;
 	case SPFILENOTIFY_NEEDNEWCABINET: // Unexpected.
 		break;
 	case SPFILENOTIFY_FILEEXTRACTED:
+#if defined(_DEBUG) || !defined(NDEBUG)
 		pFilePaths = (FILEPATHS *)Param1;
-//		printf("Extracting %s\n", pFilePaths->Target);
+		printf("FILEEXTRACTED source: %s, target: %s\n", pFilePaths->Source, pFilePaths->Target);
+#endif
 		break;
 	case SPFILENOTIFY_FILEOPDELAYED:
+	default:
 		break;
 	}
 	return lRetVal;
@@ -1616,7 +1743,7 @@ BOOL ReadExeFromFile(
 		FcloseAndNull(fp);
 		return FALSE;
 	}
-	fread(lpBuf, sizeof(BYTE), bufsize, fp);
+	size_t readsize = fread(lpBuf, sizeof(BYTE), bufsize, fp);
 
 	if (IsImageSig(lpBuf, IMAGE_DOS_SIGNATURE)) {
 		PIMAGE_DOS_HEADER pIDh = (PIMAGE_DOS_HEADER)&lpBuf[0];
@@ -1671,7 +1798,7 @@ BOOL ReadExeFromFile(
 						lpBuf = lpBuf2;
 					}
 					fseek(fp, (LONG)dwExportPointerToRawData, SEEK_SET);
-					fread(lpBuf, sizeof(BYTE), bufsize, fp);
+					readsize = fread(lpBuf, sizeof(BYTE), bufsize, fp);
 					OutputMainInfoLog("dwExportVirtualAddress: 0x%lx, dwExportSize: 0x%lx\n", dwExportVirtualAddress, dwExportSize);
 					OutputMainChannel(fileMainInfo, lpBuf, NULL, 0, bufsize + bufsize % 16);
 					OutputExportDirectory(lpBuf, bufsize, dwExportVirtualAddress, 0);
@@ -1690,7 +1817,7 @@ BOOL ReadExeFromFile(
 						lpBuf = lpBuf2;
 					}
 					fseek(fp, (LONG)dwImportPointerToRawData, SEEK_SET);
-					fread(lpBuf, sizeof(BYTE), bufsize, fp);
+					readsize = fread(lpBuf, sizeof(BYTE), bufsize, fp);
 					OutputMainInfoLog("dwImportVirtualAddress: 0x%lx, dwImportSize: 0x%lx\n", dwImportVirtualAddress, dwImportSize);
 					OutputMainChannel(fileMainInfo, lpBuf, NULL, 0, bufsize + bufsize % 16);
 					OutputImportDirectory(lpBuf, bufsize, dwImportVirtualAddress, 0);
@@ -1709,7 +1836,7 @@ BOOL ReadExeFromFile(
 						lpBuf = lpBuf2;
 					}
 					fseek(fp, (LONG)dwResourcePointerToRawData, SEEK_SET);
-					fread(lpBuf, sizeof(BYTE), bufsize, fp);
+					readsize = fread(lpBuf, sizeof(BYTE), bufsize, fp);
 					OutputMainInfoLog("dwResourceVirtualAddress: 0x%lx, dwResourceSize: 0x%lx\n", dwResourceVirtualAddress, dwResourceSize);
 					OutputMainChannel(fileMainInfo, lpBuf, NULL, 0, bufsize + bufsize % 16);
 					_TCHAR szTab[256] = {};
@@ -1725,10 +1852,10 @@ BOOL ReadExeFromFile(
 					UINT uiSecuromReadSize = DISC_MAIN_DATA_SIZE * 2;
 					fseek(fp, -4, SEEK_END);
 					UINT uiOfsOfSecuRomDll = 0;
-					fread(&uiOfsOfSecuRomDll, sizeof(UINT), 1, fp);
+					readsize = fread(&uiOfsOfSecuRomDll, sizeof(UINT), 1, fp);
 					if (uiOfsOfSecuRomDll) {
 						fseek(fp, (LONG)uiOfsOfSecuRomDll, SEEK_SET);
-						fread(lpBuf, sizeof(BYTE), (size_t)uiSecuromReadSize, fp);
+						readsize = fread(lpBuf, sizeof(BYTE), (size_t)uiSecuromReadSize, fp);
 						if (!strncmp((LPCH)lpBuf, "AddD", 4)) {
 							UINT uiOfsOf16 = 0;
 							UINT uiOfsOf32 = 0;
@@ -1740,19 +1867,19 @@ BOOL ReadExeFromFile(
 							OutputSecuRomDllHeader(lpBuf, &uiOfsOf16, &uiOfsOf32, &uiOfsOfNT, &uiSizeOf16, &uiSizeOf32, &uiSizeOfNT);
 
 							fseek(fp, (LONG)uiOfsOf16, SEEK_SET);
-							fread(lpBuf, sizeof(BYTE), (size_t)uiSizeOf16, fp);
+							readsize = fread(lpBuf, sizeof(BYTE), (size_t)uiSizeOf16, fp);
 							OutputMainInfoLog(OUTPUT_DHYPHEN_PLUS_STR("Sintf16.dll [F:%s]"), _T(__FUNCTION__));
 							OutputMainChannel(fileMainInfo, lpBuf, NULL, 0, uiSizeOf16);
 							OutputSint16(lpBuf, 0);
 
 							fseek(fp, (LONG)uiOfsOf32, SEEK_SET);
-							fread(lpBuf, sizeof(BYTE), (size_t)uiSizeOf32, fp);
+							readsize = fread(lpBuf, sizeof(BYTE), (size_t)uiSizeOf32, fp);
 							OutputMainInfoLog(OUTPUT_DHYPHEN_PLUS_STR("Sintf32.dll [F:%s]"), _T(__FUNCTION__));
 							OutputMainChannel(fileMainInfo, lpBuf, NULL, 0, uiSizeOf32);
 							OutputSint32(lpBuf, 0, uiSizeOf32, FALSE);
 
 							fseek(fp, (LONG)uiOfsOfNT, SEEK_SET);
-							fread(lpBuf, sizeof(BYTE), (size_t)uiSizeOfNT, fp);
+							readsize = fread(lpBuf, sizeof(BYTE), (size_t)uiSizeOfNT, fp);
 							OutputMainInfoLog(OUTPUT_DHYPHEN_PLUS_STR("SintfNT.dll [F:%s]"), _T(__FUNCTION__));
 							OutputMainChannel(fileMainInfo, lpBuf, NULL, 0, uiSizeOfNT);
 							OutputSintNT(lpBuf, 0, uiSizeOfNT, FALSE);
@@ -1762,7 +1889,7 @@ BOOL ReadExeFromFile(
 						rewind(fp);
 						BOOL bFound = FALSE;
 						do {
-							size_t readsize = fread(lpBuf, sizeof(BYTE), (size_t)uiSecuromReadSize, fp);
+							readsize = fread(lpBuf, sizeof(BYTE), (size_t)uiSecuromReadSize, fp);
 							if (readsize < (size_t)uiSecuromReadSize) {
 								if (feof(fp)) {
 									break;
@@ -1832,7 +1959,7 @@ BOOL ProcessDirectory(
 			if (_tcscmp(fd.cFileName, _T(".")) &&
 				_tcscmp(fd.cFileName, _T(".."))) {
 				_TCHAR szFoundFilePathName[_MAX_PATH];
-				_tcsncpy(szFoundFilePathName, szExtractdir, SIZE_OF_ARRAY(szFoundFilePathName));
+				_tcsncpy(szFoundFilePathName, szExtractdir, SIZE_OF_ARRAY(szFoundFilePathName) - 1);
 				_tcsncat(szFoundFilePathName, fd.cFileName, SIZE_OF_ARRAY(szFoundFilePathName) - _tcslen(szFoundFilePathName));
 
 				if (!(FILE_ATTRIBUTE_DIRECTORY & fd.dwFileAttributes)) {
@@ -1881,24 +2008,28 @@ BOOL ProcessDirectory(
 	}
 	return TRUE;
 }
+
+#if defined(__linux__)
+#include <mntent.h>
+#elif defined(__APPLE__) && defined(__MACH__)
+#include <sys/param.h>
+#include <sys/mount.h>
 #endif
-VOID GetFullPathWithDrive(
+BOOL GetFullPathWithDrive(
 	PDEVICE pDevice,
 	PDISC pDisc,
 	INT nIdx,
 	_TCHAR* FullPathWithDrive,
 	size_t FullPathWithDriveLen
 ) {
-	CHAR FullPathTmp[_MAX_PATH] = {};
-	CHAR drive[_MAX_DRIVE] = {};
 	CHAR dir[_MAX_DIR] = {};
 	CHAR filename[_MAX_FNAME] = {};
 	CHAR ext[_MAX_EXT] = {};
-#ifdef _WIN32
+
+#if defined(_WIN32)
+	CHAR FullPathTmp[_MAX_PATH] = {};
+	CHAR drive[_MAX_DRIVE] = {};
 	_snprintf(drive, sizeof(drive), "%c:", pDevice->byDriveLetter);
-#else
-	_snprintf(drive, sizeof(drive), "%s", pDevice->drivepath);
-#endif
 	_splitpath(pDisc->PROTECT.pFullNameForExe[nIdx], NULL, dir, filename, ext);
 	_makepath(FullPathTmp, drive, dir, filename, ext);
 
@@ -1907,6 +2038,75 @@ VOID GetFullPathWithDrive(
 		FullPathTmp, sizeof(FullPathTmp), FullPathWithDrive, (INT)FullPathWithDriveLen);
 #else
 	strncpy(FullPathWithDrive, FullPathTmp, FullPathWithDriveLen);
+#endif
+	return TRUE;
+#elif defined(__linux__)
+	char dev_real[PATH_MAX];
+
+	if (!realpath(pDevice->drivepath, dev_real)) {
+		perror("realpath(device)");
+		return FALSE;
+	}
+
+	FILE* fp = setmntent("/proc/self/mounts", "r");
+	if (!fp) {
+		fp = setmntent("/etc/mtab", "r");
+		if (!fp) {
+			perror("setmntent");
+			return FALSE;
+		}
+	}
+
+	struct mntent* ent;
+	while ((ent = getmntent(fp)) != NULL) {
+		char fs_real[PATH_MAX];
+
+		if (!realpath(ent->mnt_fsname, fs_real)) {
+			continue;
+		}
+
+		if (strcmp(fs_real, dev_real) == 0) {
+			_splitpath(pDisc->PROTECT.pFullNameForExe[nIdx], NULL, dir, filename, ext);
+			_makepath(FullPathWithDrive, ent->mnt_dir, dir, filename, ext);
+			FullPathWithDrive[FullPathWithDriveLen - 1] = '\0';
+			endmntent(fp);
+			return TRUE;
+		}
+	}
+
+	endmntent(fp);
+	return FALSE;
+#elif defined(__APPLE__) && defined(__MACH__)
+	char dev_real[PATH_MAX];
+
+	if (!realpath(pDevice->drivepath, dev_real)) {
+		perror("realpath(device)");
+		return FALSE;
+	}
+
+	struct statfs* mnts;
+	int n = getmntinfo(&mnts, MNT_NOWAIT);
+	if (n <= 0) {
+		perror("getmntinfo");
+		return FALSE;
+	}
+
+	for (int i = 0; i < n; ++i) {
+		char fs_real[PATH_MAX];
+
+		if (!realpath(mnts[i].f_mntfromname, fs_real)) {
+			continue;
+		}
+
+		if (strcmp(fs_real, dev_real) == 0) {
+			_splitpath(pDisc->PROTECT.pFullNameForExe[nIdx], NULL, dir, filename, ext);
+			_makepath(FullPathWithDrive, mnts[i].f_mntonname, dir, filename, ext);
+			FullPathWithDrive[FullPathWithDriveLen - 1] = '\0';
+			return FALSE;
+		}
+	}
+
+	return TRUE;
 #endif
 }
 
@@ -1940,11 +2140,11 @@ BOOL ReadCDForCheckingExe(
 		BOOL bCab = FALSE;
 		_TCHAR FullPathWithDrive[_MAX_PATH] = {};
 		GetFullPathWithDrive(pDevice, pDisc, n, FullPathWithDrive, sizeof(FullPathWithDrive));
-#ifdef _WIN32
-		if (strcasestrW(FullPathWithDrive, _T("directx"))) {
+
+		if (strcasestr(FullPathWithDrive, _T("directx"))) {
 			continue;
 		}
-#endif
+
 		if (strcasestr(pDisc->PROTECT.pNameForExe[n], ".CAB") ||
 			strcasestr(pDisc->PROTECT.pNameForExe[n], ".HDR")) {
 
@@ -1960,22 +2160,36 @@ BOOL ReadCDForCheckingExe(
 					, pDisc->PROTECT.pFullNameForExe[n]
 				);
 				if (pExtArg->byMicroSoftCabFile) {
-#ifdef _WIN32
 					OutputString(
 						"Please wait until all files are extracted. This is needed to search protection\n"
 					);
+#ifdef _WIN32
 					_tcscat(szTmpPath, _T("!extracted\\"));
-					ProcessDirectory(pExtArg, pDisc, szTmpPath, FILE_CREATE);
-					if (!SetupIterateCabinet(FullPathWithDrive, 0, (PSP_FILE_CALLBACK)(PVOID)CabinetCallback, szTmpPath)) {
-						// 
-					}
-					// Search exe, dll from extracted file
-					ProcessDirectory(pExtArg, pDisc, szTmpPath, FILE_SEARCH);
-					ProcessDirectory(pExtArg, pDisc, szTmpPath, FILE_DELETE);
-					bCab = TRUE;
 #else
-					// TODO: linux can use cabextract
+					_tcscat(szTmpPath, _T("!extracted/"));
 #endif
+					if (ProcessDirectory(pExtArg, pDisc, szTmpPath, FILE_CREATE) == FALSE && GetLastError() != 2) {
+						OutputErrorString("Failed to FILE_CREATE, file: %s\n", FullPathWithDrive);
+						continue;
+					}
+#ifdef _WIN32
+					SetupIterateCabinet(FullPathWithDrive, 0, (PSP_FILE_CALLBACK)(PVOID)CabinetCallback, szTmpPath);
+#else
+					if (MySetupIterateCabinetA(FullPathWithDrive, (MY_PSP_FILE_CALLBACK)CabinetCallback, szTmpPath) == -1) {
+						OutputErrorString("Failed to MySetupIterateCabinetA, file: %s\n", FullPathWithDrive);
+						continue;
+					}
+#endif
+					// Search exe, dll from extracted file
+					if (ProcessDirectory(pExtArg, pDisc, szTmpPath, FILE_SEARCH) == FALSE) {
+						OutputErrorString("Failed to FILE_SEARCH, file: %s\n", FullPathWithDrive);
+						continue;
+					}
+					if (ProcessDirectory(pExtArg, pDisc, szTmpPath, FILE_DELETE) == FALSE) {
+						OutputErrorString("Failed to FILE_DELETE, file: %s\n", FullPathWithDrive);
+						continue;
+					}
+					bCab = TRUE;
 				}
 				else {
 					OutputString("/mscf is needed to extract it\n");
