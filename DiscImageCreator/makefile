@@ -7,8 +7,8 @@ else ifeq ($(shell uname),Darwin)
   LIBS := -larchive
   LDFLAGS := -framework CoreFoundation -framework IOKit
 endif
-CFLAGS := -include _linux/defineForLinux.h
-CXXFLAGS := $(CFLAGS) -std=c++11
+CFLAGS := 
+CXXFLAGS := -include _linux/defineForLinux.h -std=c++11
 
 ifneq ($(SANITIZER),)
   CFLAGS   := -fsanitize=$(SANITIZER) $(CFLAGS)
@@ -20,13 +20,27 @@ ifeq ($(DEBUG), 1)
   CFLAGS += -O0 -g
   CXXFLAGS += -O0 -g
 else
-  CFLAGS += -O2 -Wall -Wextra -Wno-unknown-pragmas
+  CFLAGS += -O2 -Wall -Wextra -Wno-unknown-pragmas -Wcast-align -Wcast-qual -Wdisabled-optimization -Wdouble-promotion -Wfloat-equal -Wformat=2 -Wformat-signedness -Winit-self -Winline -Winvalid-pch -Wlogical-op -Wmissing-include-dirs -Wmultichar -Woverlength-strings -Wpacked -Wpointer-arith -Wredundant-decls -Wshadow -Wstack-protector -Wstrict-aliasing=2 -Wswitch-default -Wswitch-enum -Wtrampolines -Wvariadic-macros -Wvector-operation-performance -Wwrite-strings -Wunused-macros
   ifeq ($(shell uname),Linux)
     CXXFLAGS += -O2 -Wall -Wextra -Wno-unknown-pragmas -Wcast-align -Wcast-qual -Wconditionally-supported -Wdisabled-optimization -Wdouble-promotion -Wfloat-equal -Wformat=2 -Wformat-signedness -Winit-self -Winline -Winvalid-pch -Wlogical-op -Wmissing-include-dirs -Wmultichar -Wnoexcept -Woverlength-strings -Wpacked -Wpointer-arith -Wredundant-decls -Wshadow -Wstack-protector -Wstrict-aliasing=2 -Wstrict-null-sentinel -Wswitch-default -Wswitch-enum -Wtrampolines -Wvariadic-macros -Wvector-operation-performance -Wwrite-strings -Wunused-macros
   else ifeq ($(shell uname),Darwin)
     CXXFLAGS += -O2 -Wall -Wextra -Wno-unknown-pragmas -Wcast-align -Wcast-qual -Wdisabled-optimization -Wdouble-promotion -Wfloat-equal -Wformat=2 -Winit-self -Winline -Winvalid-pch -Wmissing-include-dirs -Wmultichar -Woverlength-strings -Wpacked -Wpointer-arith -Wredundant-decls -Wshadow -Wstack-protector -Wstrict-aliasing=2 -Wswitch-default -Wswitch-enum -Wvariadic-macros -Wwrite-strings -Wunused-macros
   endif
 endif
+
+SOURCES_C := \
+  _external/abgx360.o \
+  _external/aes.o \
+  _external/aesni.o \
+  _external/crc16ccitt.o \
+  _external/crc32.o \
+  _external/md5c.o \
+  _external/platform_util.o \
+  _external/rijndael-alg-fst.o \
+  _external/sha1.o \
+  _external/sha224-256.o \
+  _external/sha384-512.o \
+  _external/xxhash.o \
 
 SOURCES_CXX := \
   calcHash.o \
@@ -51,23 +65,11 @@ SOURCES_CXX := \
   outputScsiCmdLogforDVD.o \
   set.o \
   xml.o \
-  _external/abgx360.o \
-  _external/aes.o \
-  _external/aesni.o \
-  _external/crc16ccitt.o \
-  _external/crc32.o \
   _external/ECCEDC.o \
-  _external/md5c.o \
   _external/NonStandardFunction.o \
-  _external/platform_util.o \
   _external/prngcd.o \
   _external/reedSolomonGF64.o \
-  _external/rijndael-alg-fst.o \
-  _external/sha1.o \
-  _external/sha224-256.o \
-  _external/sha384-512.o \
   _external/tinyxml2.o \
-  _external/xxhash.o \
   _linux/defineForLinux.o
 
 OBJECTS := $(SOURCES_C:.c=.o) $(SOURCES_CXX:.cpp=.o)

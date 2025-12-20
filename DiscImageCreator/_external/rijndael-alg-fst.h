@@ -34,6 +34,9 @@ typedef unsigned char	u8;
 typedef unsigned short	u16;	
 typedef unsigned int	u32;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 int rijndaelKeySetupEnc(u32 rk[/*4*(Nr + 1)*/], const u8 cipherKey[], int keyBits);
 int rijndaelKeySetupDec(u32 rk[/*4*(Nr + 1)*/], const u8 cipherKey[], int keyBits);
 void rijndaelEncrypt(const u32 rk[/*4*(Nr + 1)*/], int Nr, const u8 pt[16], u8 ct[16]);
@@ -43,5 +46,7 @@ void rijndaelDecrypt(const u32 rk[/*4*(Nr + 1)*/], int Nr, const u8 ct[16], u8 p
 void rijndaelEncryptRound(const u32 rk[/*4*(Nr + 1)*/], int Nr, u8 block[16], int rounds);
 void rijndaelDecryptRound(const u32 rk[/*4*(Nr + 1)*/], int Nr, u8 block[16], int rounds);
 #endif /* INTERMEDIATE_VALUE_KAT */
-
+#ifdef __cplusplus
+}
+#endif
 #endif /* __RIJNDAEL_ALG_FST_H */

@@ -27,10 +27,10 @@
     <ClCompile Include="convert.cpp">
       <Filter>source</Filter>
     </ClCompile>
-    <ClCompile Include="_external\crc16ccitt.cpp">
+    <ClCompile Include="_external\crc16ccitt.c">
       <Filter>_external</Filter>
     </ClCompile>
-    <ClCompile Include="_external\crc32.cpp">
+    <ClCompile Include="_external\crc32.c">
       <Filter>_external</Filter>
     </ClCompile>
     <ClCompile Include="DiscImageCreator.cpp">
@@ -72,7 +72,7 @@
     <ClCompile Include="_external\prngcd.cpp">
       <Filter>_external</Filter>
     </ClCompile>
-    <ClCompile Include="_external\sha1.cpp">
+    <ClCompile Include="_external\sha1.c">
       <Filter>_external</Filter>
     </ClCompile>
     <ClCompile Include="set.cpp">
@@ -93,25 +93,25 @@
     <ClCompile Include="_linux\defineForLinux.cpp">
       <Filter>_linux</Filter>
     </ClCompile>
-    <ClCompile Include="_external\md5c.cpp">
+    <ClCompile Include="_external\md5c.c">
       <Filter>_external</Filter>
     </ClCompile>
-    <ClCompile Include="_external\abgx360.cpp">
+    <ClCompile Include="_external\abgx360.c">
       <Filter>_external</Filter>
     </ClCompile>
-    <ClCompile Include="_external\rijndael-alg-fst.cpp">
+    <ClCompile Include="_external\rijndael-alg-fst.c">
       <Filter>_external</Filter>
     </ClCompile>
     <ClCompile Include="_external\tinyxml2.cpp">
       <Filter>_external</Filter>
     </ClCompile>
-    <ClCompile Include="_external\aes.cpp">
+    <ClCompile Include="_external\aes.c">
       <Filter>_external</Filter>
     </ClCompile>
-    <ClCompile Include="_external\platform_util.cpp">
+    <ClCompile Include="_external\platform_util.c">
       <Filter>_external</Filter>
     </ClCompile>
-    <ClCompile Include="_external\aesni.cpp">
+    <ClCompile Include="_external\aesni.c">
       <Filter>_external</Filter>
     </ClCompile>
     <ClCompile Include="outputFileSystem.cpp">
@@ -123,13 +123,13 @@
     <ClCompile Include="execTapeCmd.cpp">
       <Filter>source</Filter>
     </ClCompile>
-    <ClCompile Include="_external\sha224-256.cpp">
+    <ClCompile Include="_external\sha224-256.c">
       <Filter>_external</Filter>
     </ClCompile>
-    <ClCompile Include="_external\sha384-512.cpp">
+    <ClCompile Include="_external\sha384-512.c">
       <Filter>_external</Filter>
     </ClCompile>
-    <ClCompile Include="_external\xxhash.cpp">
+    <ClCompile Include="_external\xxhash.c">
       <Filter>_external</Filter>
     </ClCompile>
     <ClCompile Include="_external\ECCEDC.cpp">

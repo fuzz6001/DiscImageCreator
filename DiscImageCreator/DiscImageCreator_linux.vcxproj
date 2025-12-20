@@ -66,7 +66,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ProjectPublicIncludePath>
     </ProjectPublicIncludePath>
-    <IncludePath>$(MSBuildProjectDirectory);$(IncludePath)</IncludePath>
+    <IncludePath>$(MSBuildProjectDirectory);$(MSBuildProjectDirectory)\_external;$(IncludePath)</IncludePath>
     <TargetName>DiscImageCreator</TargetName>
     <LibraryPath>
     </LibraryPath>
@@ -101,23 +101,59 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="_external\abgx360.cpp" />
-    <ClCompile Include="_external\aes.cpp" />
-    <ClCompile Include="_external\aesni.cpp" />
-    <ClCompile Include="_external\crc16ccitt.cpp" />
-    <ClCompile Include="_external\crc32.cpp" />
+    <ClCompile Include="_external\abgx360.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\aes.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\aesni.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\crc16ccitt.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\crc32.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="_external\ECCEDC.cpp" />
-    <ClCompile Include="_external\md5c.cpp" />
+    <ClCompile Include="_external\md5c.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="_external\NonStandardFunction.cpp" />
-    <ClCompile Include="_external\platform_util.cpp" />
+    <ClCompile Include="_external\platform_util.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="_external\prngcd.cpp" />
     <ClCompile Include="_external\reedSolomonGF64.cpp" />
-    <ClCompile Include="_external\rijndael-alg-fst.cpp" />
-    <ClCompile Include="_external\sha1.cpp" />
-    <ClCompile Include="_external\sha224-256.cpp" />
-    <ClCompile Include="_external\sha384-512.cpp" />
+    <ClCompile Include="_external\rijndael-alg-fst.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\sha1.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\sha224-256.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\sha384-512.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="_external\tinyxml2.cpp" />
-    <ClCompile Include="_external\xxhash.cpp" />
+    <ClCompile Include="_external\xxhash.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="_linux\defineForLinux.cpp" />
   </ItemGroup>
   <ItemGroup>
