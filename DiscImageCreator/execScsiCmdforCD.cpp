@@ -459,14 +459,14 @@ BOOL ReadCDForRereadingSectorNew(
 				}
 				if (nC2ErrorBit == 0) {
 					OutputC2ErrorLog("\n");
-					OutputMainChannel(fileC2Error, fixedMain, "Correction complete (main)", nLBA, CD_RAW_SECTOR_SIZE);
-					OutputMainChannel(fileC2Error, fixedC2, "Correction complete (c2)", nLBA, CD_RAW_READ_C2_294_SIZE);
+					OutputMainChannel(fileC2Error, fixedMain, _T("Correction complete (main)"), nLBA, CD_RAW_SECTOR_SIZE);
+					OutputMainChannel(fileC2Error, fixedC2, _T("Correction complete (c2)"), nLBA, CD_RAW_READ_C2_294_SIZE);
 					break;
 				}
 				else {
 					OutputLog(standardOut | fileC2Error, "\nRemains %d c2 error. Rereading times: %4u/%4u\n", nC2ErrorBit, i + 1, pExtArg->uiMaxRereadNum);
-					OutputMainChannel(fileC2Error, fixedMain, "In the process of correction (main)", nLBA, CD_RAW_SECTOR_SIZE);
-					OutputMainChannel(fileC2Error, fixedC2, "In the process of correction (c2)", nLBA, CD_RAW_READ_C2_294_SIZE);
+					OutputMainChannel(fileC2Error, fixedMain, _T("In the process of correction (main)"), nLBA, CD_RAW_SECTOR_SIZE);
+					OutputMainChannel(fileC2Error, fixedC2, _T("In the process of correction (c2)"), nLBA, CD_RAW_READ_C2_294_SIZE);
 				}
 
 				if (!FlushDriveCache(pExtArg, pDevice, nLBA)) {

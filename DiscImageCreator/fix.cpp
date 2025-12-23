@@ -1431,7 +1431,7 @@ BOOL FixSubChannel(
 			RecalcSubQCrc(pDisc, &tmpSector);
 
 			if (!pDisc->SUB.nCorruptCrcH && !pDisc->SUB.nCorruptCrcL && tmpSector.subch.next.byAdr == ADR_ENCODES_CURRENT_POSITION) {
-				bSubOk = FixSubQChannelUsingSubQ(&tmpSector, pDiscPerSector, nLBA, "next");
+				bSubOk = FixSubQChannelUsingSubQ(&tmpSector, pDiscPerSector, nLBA, _T("next"));
 			}
 			else {
 				// fix for index 0
@@ -1442,7 +1442,7 @@ BOOL FixSubChannel(
 				RecalcSubQCrc(pDisc, &tmpSector);
 
 				if (!pDisc->SUB.nCorruptCrcH && !pDisc->SUB.nCorruptCrcL && tmpSector.subch.next.byAdr == ADR_ENCODES_CURRENT_POSITION) {
-					bSubOk = FixSubQChannelUsingSubQ(&tmpSector, pDiscPerSector, nLBA, "next");
+					bSubOk = FixSubQChannelUsingSubQ(&tmpSector, pDiscPerSector, nLBA, _T("next"));
 				}
 				else {
 					tmpSector.subch.current = tmpSector.subch.prev;
@@ -1452,7 +1452,7 @@ BOOL FixSubChannel(
 					RecalcSubQCrc(pDisc, &tmpSector);
 
 					if (!pDisc->SUB.nCorruptCrcH && !pDisc->SUB.nCorruptCrcL) {
-						bSubOk = FixSubQChannelUsingSubQ(&tmpSector, pDiscPerSector, nLBA, "prev");
+						bSubOk = FixSubQChannelUsingSubQ(&tmpSector, pDiscPerSector, nLBA, _T("prev"));
 					}
 				}
 			}

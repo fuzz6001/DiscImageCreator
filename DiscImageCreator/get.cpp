@@ -233,7 +233,7 @@ BOOL GetReadBufParamAndSize(
 			pTrimBuf[nRoop] = strtoks(NULL, "	"); // tab
 		}
 		if (strstr(pTrimBuf[1], szTmpProduct2) != NULL) {
-			_TCHAR* tmpCmd = pTrimBuf[4];
+			CHAR* tmpCmd = pTrimBuf[4];
 			if (!strncmp(tmpCmd, "No", 2)) {
 				OutputErrorString("[ERROR] This drive [%.16s] doesn't support DVD raw dumping\n", pDevice->szProductId);
 				return FALSE;

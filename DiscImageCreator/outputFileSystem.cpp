@@ -1135,7 +1135,7 @@ VOID OutputFsPartitionMap(
 VOID GetMacTime(
 	LPBYTE lpBuf,
 	time_t* lpuiTime,
-	PCHAR lpBufTime,
+	_TCHAR* lpBufTime,
 	size_t lpBufTimeSize
 ) {
 	*lpuiTime = MAKEUINT(MAKEWORD(lpBuf[3], lpBuf[2]), MAKEWORD(lpBuf[1], lpBuf[0]));
