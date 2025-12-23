@@ -412,6 +412,37 @@ int PathRenameExtension(char* path, const char* ext)
 	return 1;
 }
 
+const char* PathFindExtensionA(const char* path)
+{
+	if (!path) {
+		return NULL;
+	}
+
+	const char* base = path;
+	for (const char* p = path; *p; ++p) {
+		if (*p == '/' || *p == '\\') {
+			base = p + 1;
+		}
+	}
+
+	const char* last_dot = NULL;
+	for (const char* p = base; *p; ++p) {
+		if (*p == '.') {
+			last_dot = p;
+		}
+	}
+
+	if (!last_dot) {
+		const char* end = base;
+		while (*end) {
+			++end;
+		}
+		return end;
+	}
+
+	return last_dot;
+}
+
 int MoveFileEx(const char* srcFile, const char* dstFile, int flag)
 {
 	FILE* fpR = NULL;

@@ -2260,6 +2260,7 @@ typedef struct _AACS_READ_BINDING_NONCE {
 
 #define __wchar_t wchar_t
 
+#define _stricmp strcasecmp
 #define _strnicmp strncasecmp
 
 #define NO_ERROR 0L
@@ -2461,6 +2462,8 @@ int PathRemoveExtension(char* path);
 
 // http://jajagacchi.jugem.jp/?eid=123
 int PathRenameExtension(char* path, const char* ext);
+
+const char* PathFindExtensionA(const char* path);
 
 int MoveFileEx(const char* srcFile, const char* dstFile, int flag);
 

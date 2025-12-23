@@ -35,6 +35,7 @@
 #include "outputScsiCmdLogforCD.h"
 #include "set.h"
 #include "_external/NonStandardFunction.h"
+#include "_external/libunshield/libunshield.h"
 
 #ifndef min
 #define min(a,b)            (((a) < (b)) ? (a) : (b))
@@ -2019,7 +2020,7 @@ BOOL GetFullPathWithDrive(
 	PDEVICE pDevice,
 	PDISC pDisc,
 	INT nIdx,
-	_TCHAR* FullPathWithDrive,
+	PCHAR FullPathWithDrive,
 	size_t FullPathWithDriveLen
 ) {
 	CHAR dir[_MAX_DIR] = {};
@@ -2033,12 +2034,8 @@ BOOL GetFullPathWithDrive(
 	_splitpath(pDisc->PROTECT.pFullNameForExe[nIdx], NULL, dir, filename, ext);
 	_makepath(FullPathTmp, drive, dir, filename, ext);
 
-#ifdef UNICODE
-	MultiByteToWideChar(CP_ACP, 0,
-		FullPathTmp, sizeof(FullPathTmp), FullPathWithDrive, (INT)FullPathWithDriveLen);
-#else
 	strncpy(FullPathWithDrive, FullPathTmp, FullPathWithDriveLen);
-#endif
+
 	return TRUE;
 #elif defined(__linux__)
 	char dev_real[PATH_MAX];
@@ -2124,9 +2121,8 @@ BOOL ReadCDForCheckingExe(
 	BYTE byRoopLen = byTransferLen;
 	SetCommandForTransferLength(pExecType, pDevice, pCdb, dwSize, &byTransferLen, &byRoopLen);
 
-#ifdef _WIN32
 	BOOL bIscCab = FALSE;
-#endif
+
 	for (INT n = 0; pDisc->PROTECT.pExtentPosForExe[n] != 0; n++) {
 		if (pDisc->SCSI.nAllLength <= pDisc->PROTECT.pExtentPosForExe[n]) {
 			OutputMainErrorLog(
@@ -2138,10 +2134,10 @@ BOOL ReadCDForCheckingExe(
 			continue;
 		}
 		BOOL bCab = FALSE;
-		_TCHAR FullPathWithDrive[_MAX_PATH] = {};
+		CHAR FullPathWithDrive[_MAX_PATH] = {};
 		GetFullPathWithDrive(pDevice, pDisc, n, FullPathWithDrive, sizeof(FullPathWithDrive));
 
-		if (strcasestr(FullPathWithDrive, _T("directx"))) {
+		if (strcasestr(FullPathWithDrive, "directx")) {
 			continue;
 		}
 
@@ -2173,7 +2169,7 @@ BOOL ReadCDForCheckingExe(
 						continue;
 					}
 #ifdef _WIN32
-					SetupIterateCabinet(FullPathWithDrive, 0, (PSP_FILE_CALLBACK)(PVOID)CabinetCallback, szTmpPath);
+					SetupIterateCabinetA(FullPathWithDrive, 0, (PSP_FILE_CALLBACK)(PVOID)CabinetCallback, szTmpPath);
 #else
 					if (MySetupIterateCabinetA(FullPathWithDrive, (MY_PSP_FILE_CALLBACK)CabinetCallback, szTmpPath) == -1) {
 						OutputErrorString("Failed to MySetupIterateCabinetA, file: %s\n", FullPathWithDrive);
@@ -2196,7 +2192,6 @@ BOOL ReadCDForCheckingExe(
 				}
 			}
 			else if (!strncmp((LPCCH)&lpBuf[0], "ISc(", 4)) {
-#ifdef _WIN32
 				OutputString(
 					"\nDetected InstallShield Cabinet File: %" CHARWIDTH "s\n"
 					, pDisc->PROTECT.pFullNameForExe[n]
@@ -2209,6 +2204,50 @@ BOOL ReadCDForCheckingExe(
 				else {
 					continue;
 				}
+#if 1
+#ifdef _WIN32
+				_tcscat(szTmpPath, _T("!extracted\\"));
+#else
+				_tcscat(szTmpPath, _T("!extracted/"));
+#endif
+				if (ProcessDirectory(pExtArg, pDisc, szTmpPath, FILE_CREATE) == FALSE && GetLastError() != 2) {
+					OutputErrorString("Failed to FILE_CREATE, file: %s\n", FullPathWithDrive);
+					continue;
+				}
+				Unshield* u = unshield_open(FullPathWithDrive);
+				if (!u) {
+					OutputErrorString("failed to open %s\n", FullPathWithDrive);
+					continue;
+				}
+				int files = unshield_file_count(u);
+				for (int i = 0; i < files; i++) {
+					const char* name = unshield_file_name(u, i);
+					const char* p = PathFindExtensionA(name);
+					if (!p || *p != '.' || p[1] == '\0') {
+						continue;
+					}
+					if (!_stricmp(p, ".exe") || !_stricmp(p, ".dll")) {
+						char out_path[_MAX_PATH];
+						snprintf(out_path, sizeof(out_path), "%s%s", szTmpPath, name);
+
+						if (!unshield_file_save(u, i, out_path)) {
+							OutputErrorString("failed to extract %s\n", name);
+						}
+					}
+				}
+				// Search exe, dll from extracted file
+				if (ProcessDirectory(pExtArg, pDisc, szTmpPath, FILE_SEARCH) == FALSE) {
+					OutputErrorString("Failed to FILE_SEARCH, file: %s\n", FullPathWithDrive);
+					continue;
+				}
+				if (ProcessDirectory(pExtArg, pDisc, szTmpPath, FILE_DELETE) == FALSE) {
+					OutputErrorString("Failed to FILE_DELETE, file: %s\n", FullPathWithDrive);
+					continue;
+				}
+				bIscCab = TRUE;
+				bCab = TRUE;
+#else
+#ifdef _WIN32
 				_TCHAR szPathIsc[_MAX_PATH] = {};
 				bRet = GetCmd(szPathIsc, _T("i6comp"), _T("exe"));
 
@@ -2379,6 +2418,7 @@ BOOL ReadCDForCheckingExe(
 				}
 #else
 				// TODO: linux doesn't support yet
+#endif
 #endif
 			}
 		}

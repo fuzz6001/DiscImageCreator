@@ -122,6 +122,46 @@
       </ForcedIncludeFiles>
     </ClCompile>
     <ClCompile Include="_external\ECCEDC.cpp" />
+    <ClCompile Include="_external\libunshield\component.c">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">CompileAsC</CompileAs>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\libunshield\converter.c">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">CompileAsC</CompileAs>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\libunshield\directory.c">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">CompileAsC</CompileAs>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\libunshield\file.c">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">CompileAsC</CompileAs>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\libunshield\file_group.c">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">CompileAsC</CompileAs>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\libunshield\helper.c">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">CompileAsC</CompileAs>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\libunshield\libunshield.c">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">CompileAsC</CompileAs>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\libunshield\log.c">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">CompileAsC</CompileAs>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="_external\md5c.c">
       <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </ForcedIncludeFiles>
@@ -190,6 +230,13 @@
     <ClInclude Include="_external\crc16ccitt.h" />
     <ClInclude Include="_external\crc32.h" />
     <ClInclude Include="_external\global.h" />
+    <ClInclude Include="_external\libunshield\cabfile.h" />
+    <ClInclude Include="_external\libunshield\converter.h" />
+    <ClInclude Include="_external\libunshield\dirent.h" />
+    <ClInclude Include="_external\libunshield\internal.h" />
+    <ClInclude Include="_external\libunshield\libunshield.h" />
+    <ClInclude Include="_external\libunshield\log.h" />
+    <ClInclude Include="_external\libunshield\unshield_config.h" />
     <ClInclude Include="_external\mbedtls\aes.h" />
     <ClInclude Include="_external\mbedtls\aesni.h" />
     <ClInclude Include="_external\mbedtls\check_config.h" />
@@ -228,7 +275,7 @@
       <Message>CreateBuildDateTime.h</Message>
     </PreBuildEvent>
     <Link>
-      <AdditionalDependencies>-larchive;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>-larchive;-lz;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>/usr/lib/x86_64-linux-gnu;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -239,7 +286,7 @@
       <CppAdditionalWarning>no-unknown-pragmas;%(CppAdditionalWarning)</CppAdditionalWarning>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>-larchive;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>-larchive;-lz;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

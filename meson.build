@@ -12,11 +12,12 @@ if target_machine.system() in ['linux', 'darwin']
   build_date = run_command('date', '+%Y%m%d').stdout().strip()
   build_time = run_command('date', '+%H%M%S').stdout().strip()
   libarchive_dep = dependency('libarchive', required: true, method: 'pkg-config')
+  zlib_dep = dependency('zlib', required: true, method: 'pkg-config')
   add_project_arguments('-include', 'defineForLinux.h', language : 'cpp')
-  inc = [include_directories('DiscImageCreator/'), include_directories('DiscImageCreator/_linux')]
+  inc = [include_directories('DiscImageCreator/'), include_directories('DiscImageCreator/_external'), include_directories('DiscImageCreator/_linux')]
 endif
 
-deps = [libarchive_dep]
+deps = [libarchive_dep, zlib_dep]
 
 if host_machine.system() == 'darwin'
   applefw_dep = dependency(
@@ -58,6 +59,14 @@ executable(
     'DiscImageCreator/_external/sha384-512.c',
     'DiscImageCreator/_external/tinyxml2.cpp',
     'DiscImageCreator/_external/xxhash.c',
+    'DiscImageCreator/_external/libunshield/component.c',
+    'DiscImageCreator/_external/libunshield/converter.c',
+    'DiscImageCreator/_external/libunshield/directory.c',
+    'DiscImageCreator/_external/libunshield/file.c',
+    'DiscImageCreator/_external/libunshield/file_group.c',
+    'DiscImageCreator/_external/libunshield/helper.c',
+    'DiscImageCreator/_external/libunshield/libunshield.c',
+    'DiscImageCreator/_external/libunshield/log.c',
     'DiscImageCreator/_linux/defineForLinux.cpp',
     'DiscImageCreator/calcHash.cpp',
     'DiscImageCreator/check.cpp',

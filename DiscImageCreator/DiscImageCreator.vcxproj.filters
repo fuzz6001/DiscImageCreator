@@ -19,6 +19,9 @@
     <Filter Include="_external\mbedtls">
       <UniqueIdentifier>{31e56d45-a47c-493b-8395-5a700e03c6a9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="_external\libunshield">
+      <UniqueIdentifier>{d0332663-d7b4-4216-906a-ca449fb842c2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="_external\crc16ccitt.h">
@@ -162,6 +165,27 @@
     <ClInclude Include="_external\reedSolomonGF64.h">
       <Filter>_external</Filter>
     </ClInclude>
+    <ClInclude Include="_external\libunshield\internal.h">
+      <Filter>_external\libunshield</Filter>
+    </ClInclude>
+    <ClInclude Include="_external\libunshield\libunshield.h">
+      <Filter>_external\libunshield</Filter>
+    </ClInclude>
+    <ClInclude Include="_external\libunshield\cabfile.h">
+      <Filter>_external\libunshield</Filter>
+    </ClInclude>
+    <ClInclude Include="_external\libunshield\unshield_config.h">
+      <Filter>_external\libunshield</Filter>
+    </ClInclude>
+    <ClInclude Include="_external\libunshield\log.h">
+      <Filter>_external\libunshield</Filter>
+    </ClInclude>
+    <ClInclude Include="_external\libunshield\dirent.h">
+      <Filter>_external\libunshield</Filter>
+    </ClInclude>
+    <ClInclude Include="_external\libunshield\converter.h">
+      <Filter>_external\libunshield</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="_external\crc16ccitt.c">
@@ -277,6 +301,30 @@
     </ClCompile>
     <ClCompile Include="_external\reedSolomonGF64.cpp">
       <Filter>_external</Filter>
+    </ClCompile>
+    <ClCompile Include="_external\libunshield\libunshield.c">
+      <Filter>_external\libunshield</Filter>
+    </ClCompile>
+    <ClCompile Include="_external\libunshield\component.c">
+      <Filter>_external\libunshield</Filter>
+    </ClCompile>
+    <ClCompile Include="_external\libunshield\helper.c">
+      <Filter>_external\libunshield</Filter>
+    </ClCompile>
+    <ClCompile Include="_external\libunshield\log.c">
+      <Filter>_external\libunshield</Filter>
+    </ClCompile>
+    <ClCompile Include="_external\libunshield\file_group.c">
+      <Filter>_external\libunshield</Filter>
+    </ClCompile>
+    <ClCompile Include="_external\libunshield\converter.c">
+      <Filter>_external\libunshield</Filter>
+    </ClCompile>
+    <ClCompile Include="_external\libunshield\file.c">
+      <Filter>_external\libunshield</Filter>
+    </ClCompile>
+    <ClCompile Include="_external\libunshield\directory.c">
+      <Filter>_external\libunshield</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

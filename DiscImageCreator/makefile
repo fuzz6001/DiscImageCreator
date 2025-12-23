@@ -1,10 +1,10 @@
 TARGET := DiscImageCreator
 ifeq ($(shell uname),Linux)
   INCFLAGS := -I. -I_external -I_linux
-  LIBS := -larchive
+  LIBS := -larchive -lz
 else ifeq ($(shell uname),Darwin)
   INCFLAGS := -I. -I_external -I_linux -I$(shell brew --prefix libarchive)/include
-  LIBS := -larchive
+  LIBS := -larchive -lz
   LDFLAGS := -framework CoreFoundation -framework IOKit
 endif
 CFLAGS := 
@@ -41,6 +41,14 @@ SOURCES_C := \
   _external/sha224-256.o \
   _external/sha384-512.o \
   _external/xxhash.o \
+  _external/libunshield/component.o \
+  _external/libunshield/converter.o \
+  _external/libunshield/directory.o \
+  _external/libunshield/file.o \
+  _external/libunshield/file_group.o \
+  _external/libunshield/helper.o \
+  _external/libunshield/libunshield.o \
+  _external/libunshield/log.o \
 
 SOURCES_CXX := \
   calcHash.o \
