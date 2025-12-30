@@ -24,6 +24,7 @@
 #include "output.h"
 #include "outputScsiCmdLogforCD.h"
 #include "outputScsiCmdLogforDVD.h"
+#include "_external/ps3auth/auth_service.h"
 
 #define GAMECUBE_SIZE		(712880)
 #define NR_SIZE				(716464)
@@ -251,6 +252,42 @@ BOOL ReadDVD(
 			BOOL bPs3DiscPup = FALSE;
 			if (pDisc->BD.nLBAForPup != 0) {
 				bPs3DiscPup = ReadPs3Pup(pExtArg, pDevice, pDisc, &cdb, lpBuf);
+			}
+			if (IsValidPS3Drive(pDevice) && (bPs3DiscSfb || bPs3DiscPup)) {
+				auth_result result = {};
+				INT nRet = auth_service_run(pDevice, select_cmd::get, &result);
+				if (nRet == 0) {
+					OutputDiscLog(
+						"Get it from the disc, using PS3 drive\n"
+						"Data1: %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X\n"
+						"Data2: %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X\n"
+						, result.enc_a[0], result.enc_a[1], result.enc_a[2], result.enc_a[3], result.enc_a[4], result.enc_a[5], result.enc_a[6], result.enc_a[7]
+						, result.enc_a[8], result.enc_a[9], result.enc_a[10], result.enc_a[11], result.enc_a[12], result.enc_a[13], result.enc_a[14], result.enc_a[15]
+						, result.enc_b[0], result.enc_b[1], result.enc_b[2], result.enc_b[3], result.enc_b[4], result.enc_b[5], result.enc_b[6], result.enc_b[7]
+						, result.enc_b[8], result.enc_b[9], result.enc_b[10], result.enc_b[11], result.enc_b[12], result.enc_b[13], result.enc_b[14], result.enc_b[15]
+					);
+					OutputDiscLog(
+						"Decrypted\n"
+						"Data1: %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X\n"
+						, result.dec_a[0], result.dec_a[1], result.dec_a[2], result.dec_a[3], result.dec_a[4], result.dec_a[5], result.dec_a[6], result.dec_a[7]
+						, result.dec_a[8], result.dec_a[9], result.dec_a[10], result.dec_a[11], result.dec_a[12], result.dec_a[13], result.dec_a[14], result.dec_a[15]
+					);
+					if (result.dec_b[12] == 0 && result.dec_b[13] == 0 && result.dec_b[14] == 0 && result.dec_b[15] == 0) {
+						OutputDiscLog(
+							"Data2: %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X\n"
+							, result.dec_b[0], result.dec_b[1], result.dec_b[2], result.dec_b[3], result.dec_b[4], result.dec_b[5], result.dec_b[6], result.dec_b[7]
+							, result.dec_b[8], result.dec_b[9], result.dec_b[10], result.dec_b[11], result.dec_b[12], result.dec_b[13], result.dec_b[14], result.dec_b[15]
+						);
+					}
+					else {
+						OutputDiscLog(
+							"Data2: %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X XX XX XX XX\n"
+							, result.dec_b[0], result.dec_b[1], result.dec_b[2], result.dec_b[3], result.dec_b[4], result.dec_b[5], result.dec_b[6], result.dec_b[7]
+							, result.dec_b[8], result.dec_b[9], result.dec_b[10], result.dec_b[11]
+						);
+					}
+				}
+//				return TRUE;
 			}
 		}
 		FlushLog();

@@ -27,6 +27,7 @@
 #include "outputScsiCmdLog.h"
 #include "outputScsiCmdLogforCD.h"
 #include "set.h"
+#include "_external/ps3auth/auth_service.h"
 
 BOOL TestUnitReady(
 	PEXT_ARG pExtArg,
@@ -36,7 +37,7 @@ BOOL TestUnitReady(
 	cdb.OperationCode = SCSIOP_TEST_UNIT_READY;
 
 #ifdef _WIN32
-	INT direction = SCSI_IOCTL_DATA_IN;
+	INT direction = SCSI_IOCTL_DATA_UNSPECIFIED;
 #else
 	INT direction = SG_DXFER_NONE;
 #endif
@@ -79,7 +80,7 @@ BOOL Inquiry(
 	strncpy(pDevice->szVendorSpecific,
 		(LPCCH)&inquiryData.VendorSpecific, sizeof(pDevice->szVendorSpecific));
 
-	if (*pExecType != drivespeed) {
+	if (*pExecType != drivespeed && *pExecType != authps3) {
 		OutputInquiry(&inquiryData);
 	}
 	return TRUE;
@@ -837,6 +838,9 @@ BOOL SendKey(
 ) {
 	CDB::_SEND_KEY cdb = {};
 	cdb.OperationCode = SCSIOP_SEND_KEY;
+	if (IsValidPS3Drive(pDevice)) {
+		cdb.Reserved2[5] = 0xE0;
+	}
 	TWO_BYTE size;
 	size.AsUShort = keyLength;
 	REVERSE_BYTES_SHORT(&cdb.ParameterListLength, &size);
@@ -868,6 +872,9 @@ BOOL ReportKey(
 ) {
 	CDB::_REPORT_KEY cdb = {};
 	cdb.OperationCode = SCSIOP_REPORT_KEY;
+	if (IsValidPS3Drive(pDevice)) {
+		cdb.Reserved2[1] = 0xE0;
+	}
 	TWO_BYTE size;
 	size.AsUShort = keyLength;
 	REVERSE_BYTES_SHORT(&cdb.AllocationLength, &size);
@@ -1283,6 +1290,68 @@ BOOL ReadCacheForLgAsus(
 	return TRUE;
 }
 
+BOOL Ps3DriveSpecificE0(
+	PDEVICE pDevice,
+	LPBYTE header,
+	LPBYTE payload,
+	DWORD dwPayloadSize
+) {
+	CDB::_CDB12 cdb = {};
+	cdb.OperationCode = 0xE0;
+	cdb.LogicalBlock[0] = (UCHAR)dwPayloadSize;
+	cdb.LogicalBlock[2] = header[0];
+	cdb.LogicalBlock[3] = header[1];
+	cdb.TransferLength[0] = header[2];
+	cdb.TransferLength[1] = header[3];
+	cdb.TransferLength[2] = header[4];
+	cdb.TransferLength[3] = header[5];
+	cdb.Reserved2 = header[6];
+	cdb.Control = header[7];
+#ifdef _WIN32
+	INT direction = SCSI_IOCTL_DATA_IN;
+#else
+	INT direction = SG_DXFER_FROM_DEV;
+#endif
+	BYTE byScsiStatus = 0;
+	if (!ScsiPassThroughDirect(NULL, pDevice, &cdb, CDB12GENERIC_LENGTH
+		, payload, direction, dwPayloadSize, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
+		return FALSE;
+	}
+	return TRUE;
+}
+
+BOOL Ps3DriveSpecificE1(
+	PDEVICE pDevice,
+	LPBYTE header,
+	LPBYTE payload,
+	DWORD dwPayloadSize
+) {
+	CDB::_CDB12 cdb = {};
+	cdb.OperationCode = 0xE1;
+	cdb.LogicalBlock[0] = (UCHAR)dwPayloadSize;
+	cdb.LogicalBlock[2] = header[0];
+	cdb.LogicalBlock[3] = header[1];
+	cdb.TransferLength[0] = header[2];
+	cdb.TransferLength[1] = header[3];
+	cdb.TransferLength[2] = header[4];
+	cdb.TransferLength[3] = header[5];
+	cdb.Reserved2 = header[6];
+	cdb.Control = header[7];
+#ifdef _WIN32
+	INT direction = SCSI_IOCTL_DATA_OUT;
+#else
+	INT direction = SG_DXFER_TO_DEV;
+#endif
+	BYTE byScsiStatus = 0;
+	if (!ScsiPassThroughDirect(NULL, pDevice, &cdb, CDB12GENERIC_LENGTH
+		, payload, direction, dwPayloadSize, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
+		return FALSE;
+	}
+	return TRUE;
+}
+
 BOOL ReadDriveInformation(
 	PEXEC_TYPE pExecType,
 	PEXT_ARG pExtArg,
@@ -1291,7 +1360,7 @@ BOOL ReadDriveInformation(
 	UINT uiCDSpeed
 ) {
 #ifdef _WIN32
-	if (*pExecType != drivespeed) {
+	if (*pExecType != drivespeed && *pExecType != authps3) {
 		BOOL bBusTypeUSB = FALSE;
 		if (!StorageQueryProperty(pDevice, &bBusTypeUSB)) {
 			return FALSE;
@@ -1309,7 +1378,10 @@ BOOL ReadDriveInformation(
 	if (!Inquiry(pExecType, pExtArg, pDevice)) {
 		return FALSE;
 	}
-	if (*pExecType != fd && *pExecType != disk) {
+	if (*pExecType == authps3 && IsValidPS3Drive(pDevice)) {
+		auth_service_run(pDevice, select_cmd::auth, NULL);
+	}
+	else if (*pExecType != fd && *pExecType != disk) {
 		// 4th: check PLEXTOR or not here (because use modesense and from there)
 		if (IsValidPlextorDrive(pExtArg, pDevice)) {
 			if ((PLXTR_DRIVE_TYPE)pDevice->byPlxtrDrive == PLXTR_DRIVE_TYPE::NotLatest) {
@@ -1361,7 +1433,9 @@ BOOL ReadDriveInformation(
 			ReadBufferCapacity(pExtArg, pDevice);
 		}
 	}
-	ModeSense10(pExecType, pExtArg, pDevice, pDisc);
+	if (*pExecType != authps3) {
+		ModeSense10(pExecType, pExtArg, pDevice, pDisc);
+	}
 	return TRUE;
 }
 

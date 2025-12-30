@@ -1,19 +1,24 @@
 TARGET := DiscImageCreator
 ifeq ($(shell uname),Linux)
   INCFLAGS := -I. -I_external -I_linux
-  LIBS := -larchive -lz
+  LDLIBS := -larchive -lz -lcrypto -lssl
 else ifeq ($(shell uname),Darwin)
-  INCFLAGS := -I. -I_external -I_linux -I$(shell brew --prefix libarchive)/include
-  LIBS := -larchive -lz
-  LDFLAGS := -framework CoreFoundation -framework IOKit
+  PKG_CONFIG ?= pkg-config
+  PC_DEPS := libarchive zlib openssl
+  INCFLAGS := -I. -I_external -I_linux \
+              $(shell $(PKG_CONFIG) --cflags $(PC_DEPS))
+  LDFLAGS := -framework CoreFoundation -framework IOKit \
+             $(shell $(PKG_CONFIG) --libs-only-L     $(PC_DEPS)) \
+             $(shell $(PKG_CONFIG) --libs-only-other $(PC_DEPS))
+  LDLIBS := $(shell $(PKG_CONFIG) --libs-only-l     $(PC_DEPS))
 endif
 CFLAGS := 
 CXXFLAGS := -include _linux/defineForLinux.h -std=c++11
 
 ifneq ($(SANITIZER),)
-  CFLAGS   := -fsanitize=$(SANITIZER) $(CFLAGS)
-  CXXFLAGS := -fsanitize=$(SANITIZER) $(CXXFLAGS)
-  LDFLAGS  := -fsanitize=$(SANITIZER) $(LDFLAGS)
+  CFLAGS   += -fsanitize=$(SANITIZER) $(CFLAGS)
+  CXXFLAGS += -fsanitize=$(SANITIZER) $(CXXFLAGS)
+  LDFLAGS  += -fsanitize=$(SANITIZER) $(LDFLAGS)
 endif
 
 ifeq ($(DEBUG), 1)
@@ -49,6 +54,13 @@ SOURCES_C := \
   _external/libunshield/helper.o \
   _external/libunshield/libunshield.o \
   _external/libunshield/log.o \
+  _external/ps3auth/auth_service.o \
+  _external/ps3auth/crypto_backend_openssl.o \
+  _external/ps3auth/data_unwrap.o \
+  _external/ps3auth/drive_proto.o \
+  _external/ps3auth/odd_ctx.o \
+  _external/ps3auth/odd_tables.o \
+  _external/ps3auth/session_keys.o \
 
 SOURCES_CXX := \
   calcHash.o \
@@ -78,13 +90,14 @@ SOURCES_CXX := \
   _external/prngcd.o \
   _external/reedSolomonGF64.o \
   _external/tinyxml2.o \
+  _external/ps3auth/drive_transport_execscsi.o \
   _linux/defineForLinux.o
 
 OBJECTS := $(SOURCES_C:.c=.o) $(SOURCES_CXX:.cpp=.o)
 
 all: $(TARGET)
 $(TARGET): buildDateTime $(OBJECTS)
-	$(CXX) -o $@ $(OBJECTS) $(LDFLAGS) $(LIBS)
+	$(CXX) -o $@ $(OBJECTS) $(LDFLAGS) $(LDLIBS)
 
 %.o: %.c
 	$(CC) -c -o $@ $< $(CFLAGS) $(INCFLAGS)

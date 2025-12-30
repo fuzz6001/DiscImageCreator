@@ -132,6 +132,20 @@ BOOL ReadCacheForLgAsus(
 	LPBOOL lpbCached
 );
 
+BOOL Ps3DriveSpecificE0(
+	PDEVICE pDevice,
+	LPBYTE header,
+	LPBYTE payload,
+	DWORD dwPayloadSize
+);
+
+BOOL Ps3DriveSpecificE1(
+	PDEVICE pDevice,
+	LPBYTE header,
+	LPBYTE payload,
+	DWORD dwPayloadSize
+);
+
 BOOL ReadDriveInformation(
 	PEXEC_TYPE pExecType,
 	PEXT_ARG pExtArg,

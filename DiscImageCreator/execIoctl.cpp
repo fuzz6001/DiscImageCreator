@@ -560,12 +560,12 @@ BOOL ScsiPassThroughDirect(
 	}
 	// Set the scatter-gather entry in the task
 	if (kIOReturnSuccess != (err = (*pDevice->hDevice)->SetScatterGatherEntries(
-		pDevice->hDevice, range, 1, dwBufferLength, kSCSIDataTransfer_FromTargetToInitiator))) {
+		pDevice->hDevice, range, 1, dwBufferLength, nDataDirection))) {
 		fprintf(stderr, "*********** ERROR Setting SG Entries ***********\n\n");
 		return FALSE;
 	}
 	// Set the timeout in the task
-	if (kIOReturnSuccess != (err = (*pDevice->hDevice)->SetTimeoutDuration(pDevice->hDevice, 10000))) {
+	if (kIOReturnSuccess != (err = (*pDevice->hDevice)->SetTimeoutDuration(pDevice->hDevice, pDevice->dwTimeOutValue))) {
 		fprintf(stderr, "*********** ERROR Setting Timeout ***********\n\n");
 		return FALSE;
 	}

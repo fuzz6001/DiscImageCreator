@@ -172,6 +172,37 @@
       </ForcedIncludeFiles>
     </ClCompile>
     <ClCompile Include="_external\prngcd.cpp" />
+    <ClCompile Include="_external\ps3auth\auth_service.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\ps3auth\crypto_backend_openssl.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\ps3auth\data_unwrap.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\ps3auth\drive_proto.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\ps3auth\drive_transport_execscsi.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)_linux/defineForLinux.h</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\ps3auth\odd_ctx.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\ps3auth\odd_tables.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\ps3auth\session_keys.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="_external\reedSolomonGF64.cpp" />
     <ClCompile Include="_external\rijndael-alg-fst.c">
       <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -249,6 +280,15 @@
     <ClInclude Include="_external\md5.h" />
     <ClInclude Include="_external\NonStandardFunction.h" />
     <ClInclude Include="_external\prngcd.h" />
+    <ClInclude Include="_external\ps3auth\auth_service.h" />
+    <ClInclude Include="_external\ps3auth\crypto_backend.h" />
+    <ClInclude Include="_external\ps3auth\data_unwrap.h" />
+    <ClInclude Include="_external\ps3auth\drive_proto.h" />
+    <ClInclude Include="_external\ps3auth\drive_transport.h" />
+    <ClInclude Include="_external\ps3auth\odd_ctx.h" />
+    <ClInclude Include="_external\ps3auth\odd_tables.h" />
+    <ClInclude Include="_external\ps3auth\session_keys.h" />
+    <ClInclude Include="_external\ps3auth\session_keys_internal.h" />
     <ClInclude Include="_external\reedSolomonGF64.h" />
     <ClInclude Include="_external\rijndael-alg-fst.h" />
     <ClInclude Include="_external\sha-private.h" />
@@ -275,7 +315,7 @@
       <Message>CreateBuildDateTime.h</Message>
     </PreBuildEvent>
     <Link>
-      <AdditionalDependencies>-larchive;-lz;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>-larchive;-lz;-lcrypto;-lssl;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>/usr/lib/x86_64-linux-gnu;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -286,7 +326,7 @@
       <CppAdditionalWarning>no-unknown-pragmas;%(CppAdditionalWarning)</CppAdditionalWarning>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>-larchive;-lz;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>-larchive;-lz;-lcrypto;-lssl;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

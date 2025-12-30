@@ -13,11 +13,12 @@ if target_machine.system() in ['linux', 'darwin']
   build_time = run_command('date', '+%H%M%S').stdout().strip()
   libarchive_dep = dependency('libarchive', required: true, method: 'pkg-config')
   zlib_dep = dependency('zlib', required: true, method: 'pkg-config')
+  openssl_dep = dependency('openssl', required: true, method: 'pkg-config')
   add_project_arguments('-include', 'defineForLinux.h', language : 'cpp')
   inc = [include_directories('DiscImageCreator/'), include_directories('DiscImageCreator/_external'), include_directories('DiscImageCreator/_linux')]
 endif
 
-deps = [libarchive_dep, zlib_dep]
+deps = [libarchive_dep, zlib_dep, openssl_dep]
 
 if host_machine.system() == 'darwin'
   applefw_dep = dependency(
@@ -67,6 +68,14 @@ executable(
     'DiscImageCreator/_external/libunshield/helper.c',
     'DiscImageCreator/_external/libunshield/libunshield.c',
     'DiscImageCreator/_external/libunshield/log.c',
+    'DiscImageCreator/_external/ps3auth/auth_service.c',
+    'DiscImageCreator/_external/ps3auth/crypto_backend_openssl.c',
+    'DiscImageCreator/_external/ps3auth/data_unwrap.c',
+    'DiscImageCreator/_external/ps3auth/drive_proto.c',
+    'DiscImageCreator/_external/ps3auth/drive_transport_execscsi.cpp',
+    'DiscImageCreator/_external/ps3auth/odd_ctx.c',
+    'DiscImageCreator/_external/ps3auth/odd_tables.c',
+    'DiscImageCreator/_external/ps3auth/session_keys.c',
     'DiscImageCreator/_linux/defineForLinux.cpp',
     'DiscImageCreator/calcHash.cpp',
     'DiscImageCreator/check.cpp',

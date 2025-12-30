@@ -149,20 +149,22 @@ int execForDumping(PEXEC_TYPE pExecType, PEXT_ARG pExtArg, _TCHAR* pszFullPath, 
 		PathRemoveFileSpec(szPath);
 
 #ifndef _DEBUG
-		if (*pExecType != drivespeed) {
+		if (*pExecType != drivespeed && *pExecType != authps3) {
 			// 2nd: create logfile here (because logging all working)
 			if (!InitLogFile(pExecType, pExtArg, pszFullPath)) {
 				throw FALSE;
 			}
 		}
 #endif
-		if (!TestUnitReady(pExtArg, pDevice)) {
-			throw FALSE;
+		if (*pExecType != authps3) {
+			if (!TestUnitReady(pExtArg, pDevice)) {
+				throw FALSE;
+			}
 		}
 		if (!ReadDriveInformation(pExecType, pExtArg, pDevice, pDisc, s_uiSpeed)) {
 			throw FALSE;
 		}
-		if (*pExecType == drivespeed) {
+		if (*pExecType == drivespeed || *pExecType == authps3) {
 			pExtArg->byQuiet = TRUE;
 			return TRUE;
 		}
@@ -1893,6 +1895,9 @@ int checkArg(int argc, _TCHAR* argv[], PEXEC_TYPE pExecType, PEXT_ARG pExtArg, _
 			else if (cmdLen == 5 && !_tcsncmp(argv[1], _T("reset"), cmdLen)) {
 				*pExecType = reset;
 			}
+			else if (cmdLen == 7 && !_tcsncmp(argv[1], _T("authps3"), cmdLen)) {
+				*pExecType = authps3;
+			}
 			else if (cmdLen == 2 && !_tcsncmp(argv[1], _T("ls"), cmdLen)) {
 				*pExecType = drivespeed;
 			}
@@ -1951,10 +1956,10 @@ int createCmdFile(int argc, _TCHAR* argv[], _TCHAR* pszFullPath, LPTSTR pszDateT
 #endif
 		for (int i = 1; i < argc; i++) {
 			if (i == 3) {
-				OutputCommandLineLog(_T("%s%s "), s_szFname, s_szExt);
+				OutputCommandLineLog("%s%s ", s_szFname, s_szExt);
 			}
 			else {
-				OutputCommandLineLog(_T("%s "), argv[i]);
+				OutputCommandLineLog("%s ", argv[i]);
 			}
 		}
 	}
@@ -2047,6 +2052,8 @@ void printUsage(void)
 		"\t\tClose the tray\n"
 		"\treset <DriveLetter>\n"
 		"\t\tReset the drive (Only PLEXTOR)\n"
+		"\tauthps3 <DriveLetter>\n"
+		"\t\tauthenticate PS3 drive\n"
 		"\tls <DriveLetter>\n"
 		"\t\tShow maximum speed of the drive\n"
 		"\tsub <Subfile>\n"
@@ -2066,11 +2073,11 @@ void printUsage(void)
 		"\t/be\tUse 0xbe as the opcode for Reading CD forcibly\n"
 		"\t\t\tstr\t raw: sub channel mode is raw (default)\n"
 		"\t\t\t   \tpack: sub channel mode is pack\n"
-		"\t/d8\tUse 0xd8 as the opcode for Reading CD forcibly\n"
-		"\t/c2new\tContinue reading CD to recover C2 error existing sector using C2 bit\n"
 	);
 	stopMessage();
 	OutputString(
+		"\t/d8\tUse 0xd8 as the opcode for Reading CD forcibly\n"
+		"\t/c2new\tContinue reading CD to recover C2 error existing sector using C2 bit\n"
 		"\t\t\tval1\tvalue to reread (default: 4000)\n"
 		"\t/c2\tContinue reading CD to recover C2 error existing sector\n"
 		"\t\t\tval1\tvalue to reread (default: 4000)\n"
@@ -2098,11 +2105,11 @@ void printUsage(void)
 		"\t\t\tval1\tsector num\n"
 		"\t\t\tval2\tsector num (optional)\n"
 		"\t/ss\tScan sector to detect protect. If reading error exists,\n"
-		"\t   \tcontinue reading and ignore c2 error on specific sector\n"
-		"\t\t\tFor ProtectCD-VOB\n"
 	);
 	stopMessage();
 	OutputString(
+		"\t   \tcontinue reading and ignore c2 error on specific sector\n"
+		"\t\t\tFor ProtectCD-VOB\n"
 		"\t/t\tRead CD from the reverse\n"
 		"\t\t\tFor Tages\n"
 		"\t\t\tval\tretry num (default:20)\n"
@@ -2130,11 +2137,11 @@ void printUsage(void)
 		"\t\t\t   \t         edc: descramble edc error sector\n"
 		"\t\t\t   \t    sync edc: descramble invalid sync sector and edc error sector\n"
 		"\t\t\t   \t         ecc: descramble ecc error sector (e.g. some PSX)\n"
-		"\t\t\t   \t    sync ecc: descramble invalid sync sector and ecc error sector\n"
-		"\t\t\t   \t     edc ecc: descramble edc error sector and ecc error sector (e.g. some IBM-PC, SS, FMT)\n"
 	);
 	stopMessage();
 	OutputString(
+		"\t\t\t   \t    sync ecc: descramble invalid sync sector and ecc error sector\n"
+		"\t\t\t   \t     edc ecc: descramble edc error sector and ecc error sector (e.g. some IBM-PC, SS, FMT)\n"
 		"\t\t\t   \tsync edc ecc: descramble invalid sync sector and edc error sector and ecc error sector\n"
 		"Option (for CD SubChannel)\n"
 		"\t/np\tNot fix SubP\n"
@@ -2162,11 +2169,11 @@ void printUsage(void)
 		"\t/ra\tSectors are dumped to a specified extent\n"
 		"\t\t\tStart LBA\tsector num\n"
 		"\t\t\t  End LBA\tsector num\n"
-		"\t/raw\tDumping DVD by raw (2064 or 2384 bytes/sector)\n"
-		"\t\t\tComfirmed drive: Mediatec MT chip (Lite-on etc.), PLEXTOR\n"
 	);
 	stopMessage();
 	OutputString(
+		"\t/raw\tDumping DVD by raw (2064 or 2384 bytes/sector)\n"
+		"\t\t\tComfirmed drive: Mediatec MT chip (Lite-on etc.), PLEXTOR\n"
 		"\t\t\t               Hitachi-LG GDR, GCC\n"
 		"\t\t\t -> GDR (8082N, 8161B to 8164B) and GCC (4160N, 4240N to 4247N)\n"
 		"\t\t\t    supports GC/Wii dumping\n"

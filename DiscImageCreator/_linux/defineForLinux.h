@@ -2393,9 +2393,9 @@ typedef struct _STORAGE_ADAPTER_DESCRIPTOR {
 #define IOCTL_STORAGE_QUERY_PROPERTY	0
 #define IOCTL_STORAGE_GET_MEDIA_TYPES_EX	0
 #define IOCTL_DISK_GET_DRIVE_GEOMETRY_EX	0
-#define SG_DXFER_NONE 0
-#define SG_DXFER_FROM_DEV 0
-#define SG_DXFER_TO_DEV 0
+#define SG_DXFER_NONE kSCSIDataTransfer_NoDataTransfer
+#define SG_DXFER_FROM_DEV kSCSIDataTransfer_FromTargetToInitiator
+#define SG_DXFER_TO_DEV kSCSIDataTransfer_FromInitiatorToTarget
 #define SG_DXFER_TO_FROM_DEV 0
 #endif
 

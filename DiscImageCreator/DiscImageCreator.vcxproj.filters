@@ -22,6 +22,9 @@
     <Filter Include="_external\libunshield">
       <UniqueIdentifier>{d0332663-d7b4-4216-906a-ca449fb842c2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="_external\ps3auth">
+      <UniqueIdentifier>{1d1bed62-fc51-4694-97df-9eb7716ccc28}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="_external\crc16ccitt.h">
@@ -186,6 +189,33 @@
     <ClInclude Include="_external\libunshield\converter.h">
       <Filter>_external\libunshield</Filter>
     </ClInclude>
+    <ClInclude Include="_external\ps3auth\auth_service.h">
+      <Filter>_external\ps3auth</Filter>
+    </ClInclude>
+    <ClInclude Include="_external\ps3auth\crypto_backend.h">
+      <Filter>_external\ps3auth</Filter>
+    </ClInclude>
+    <ClInclude Include="_external\ps3auth\data_unwrap.h">
+      <Filter>_external\ps3auth</Filter>
+    </ClInclude>
+    <ClInclude Include="_external\ps3auth\drive_proto.h">
+      <Filter>_external\ps3auth</Filter>
+    </ClInclude>
+    <ClInclude Include="_external\ps3auth\drive_transport.h">
+      <Filter>_external\ps3auth</Filter>
+    </ClInclude>
+    <ClInclude Include="_external\ps3auth\odd_ctx.h">
+      <Filter>_external\ps3auth</Filter>
+    </ClInclude>
+    <ClInclude Include="_external\ps3auth\session_keys.h">
+      <Filter>_external\ps3auth</Filter>
+    </ClInclude>
+    <ClInclude Include="_external\ps3auth\session_keys_internal.h">
+      <Filter>_external\ps3auth</Filter>
+    </ClInclude>
+    <ClInclude Include="_external\ps3auth\odd_tables.h">
+      <Filter>_external\ps3auth</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="_external\crc16ccitt.c">
@@ -325,6 +355,30 @@
     </ClCompile>
     <ClCompile Include="_external\libunshield\directory.c">
       <Filter>_external\libunshield</Filter>
+    </ClCompile>
+    <ClCompile Include="_external\ps3auth\auth_service.c">
+      <Filter>_external\ps3auth</Filter>
+    </ClCompile>
+    <ClCompile Include="_external\ps3auth\crypto_backend_wincrypto.c">
+      <Filter>_external\ps3auth</Filter>
+    </ClCompile>
+    <ClCompile Include="_external\ps3auth\data_unwrap.c">
+      <Filter>_external\ps3auth</Filter>
+    </ClCompile>
+    <ClCompile Include="_external\ps3auth\drive_proto.c">
+      <Filter>_external\ps3auth</Filter>
+    </ClCompile>
+    <ClCompile Include="_external\ps3auth\drive_transport_execscsi.cpp">
+      <Filter>_external\ps3auth</Filter>
+    </ClCompile>
+    <ClCompile Include="_external\ps3auth\odd_ctx.c">
+      <Filter>_external\ps3auth</Filter>
+    </ClCompile>
+    <ClCompile Include="_external\ps3auth\session_keys.c">
+      <Filter>_external\ps3auth</Filter>
+    </ClCompile>
+    <ClCompile Include="_external\ps3auth\odd_tables.c">
+      <Filter>_external\ps3auth</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

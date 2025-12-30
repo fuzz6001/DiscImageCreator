@@ -29,6 +29,7 @@ typedef enum _EXEC_TYPE {
 	xgd3swap,
 	bd,
 	sacd,
+	authps3,
 	fd,
 	disk,
 	tape,
