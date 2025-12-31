@@ -34,11 +34,6 @@ BOOL StartStopUnit(
 	BYTE LoadEject
 );
 
-BOOL SynchronizeCache(
-	PEXT_ARG pExtArg,
-	PDEVICE pDevice
-);
-
 BOOL ReadTOC(
 	PEXT_ARG pExtArg,
 	PEXEC_TYPE pExecType,

@@ -81,14 +81,10 @@ BOOL ExecReadCD(
 	FOUR_BYTE LBA;
 	LBA.AsULong = (ULONG)nLBA;
 	REVERSE_BYTES(&lpCmd[2], &LBA);
-#ifdef _WIN32
-	INT direction = SCSI_IOCTL_DATA_IN;
-#else
-	INT direction = SG_DXFER_FROM_DEV;
-#endif
+
 	BYTE byScsiStatus = 0;
-	if (!ScsiPassThroughDirect(pExtArg, pDevice, lpCmd, CDB12GENERIC_LENGTH
-		, lpBuf, direction, dwBufSize, &byScsiStatus, pszFuncName, lLineNum, TRUE)
+	if (!ScsiPassThroughDirect(pExtArg, pDevice, lpCmd, CDB12GENERIC_LENGTH,
+		lpBuf, SCSI_XFER_IN, dwBufSize, &byScsiStatus, pszFuncName, lLineNum, TRUE)
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		OutputLog(standardError | fileMainError,
 			"lpCmd: %02x, %02x, %02x, %02x, %02x, %02x, %02x, %02x, %02x, %02x, %02x, %02x\n"
@@ -169,14 +165,9 @@ BOOL ExecReadCDForC2(
 	if (lpCmd[0] != 0xd8) {
 		byTransferLen = lpCmd[8];
 	}
-#ifdef _WIN32
-	INT direction = SCSI_IOCTL_DATA_IN;
-#else
-	INT direction = SG_DXFER_FROM_DEV;
-#endif
 	BYTE byScsiStatus = 0;
 	if (!ScsiPassThroughDirect(pExtArg, pDevice, lpCmd, CDB12GENERIC_LENGTH, lpBuf,
-		direction, pDevice->TRANSFER.uiBufLen * byTransferLen, &byScsiStatus, pszFuncName, lLineNum, TRUE)) {
+		SCSI_XFER_IN, pDevice->TRANSFER.uiBufLen * byTransferLen, &byScsiStatus, pszFuncName, lLineNum, TRUE)) {
 		if (pExtArg->byScanProtectViaFile) {
 			return RETURNED_CONTINUE;
 		}
@@ -209,14 +200,10 @@ BOOL FlushDriveCache(
 		FOUR_BYTE NextLBAAddress;
 		NextLBAAddress.AsULong = (ULONG)(nLBA + 1);
 		REVERSE_BYTES(&cdb.LogicalBlock, &NextLBAAddress);
-#ifdef _WIN32
-		INT direction = SCSI_IOCTL_DATA_IN;
-#else
-		INT direction = SG_DXFER_FROM_DEV;
-#endif
+
 		BYTE byScsiStatus = 0;
 		if (!ScsiPassThroughDirect(pExtArg, pDevice, (LPBYTE)&cdb, CDB12GENERIC_LENGTH,
-			NULL, direction, 0, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+			NULL, SCSI_XFER_IN, 0, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
 			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			return FALSE;
 		}

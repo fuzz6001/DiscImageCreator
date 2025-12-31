@@ -106,11 +106,6 @@ BOOL Read10(
 	cdb.TransferBlocksMsb = (UCHAR)(dwTransferLen >> 8);
 	cdb.TransferBlocksLsb = (UCHAR)dwTransferLen;
 
-#ifdef _WIN32
-	INT direction = SCSI_IOCTL_DATA_IN;
-#else
-	INT direction = SG_DXFER_FROM_DEV;
-#endif
 	BYTE byScsiStatus = 0;
 	CalcInit(pExtArg, &pHash->pHashChunk[pHash->uiIndex]);
 
@@ -125,7 +120,7 @@ BOOL Read10(
 		cdb.LogicalBlockByte2 = (UCHAR)(dwLBA >> 8);
 		cdb.LogicalBlockByte3 = (UCHAR)dwLBA;
 		if (!ScsiPassThroughDirect(NULL, pDevice, &cdb, CDB10GENERIC_LENGTH, lpBuf,
-			direction, pDisc->dwBytesPerSector * dwTransferLen, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+			SCSI_XFER_IN, pDisc->dwBytesPerSector * dwTransferLen, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
 			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			if (GetLastError() == 87) {
 				OutputString("Change the transfer length: %lu -> ", dwTransferLen);
@@ -704,65 +699,4 @@ BOOL StorageQueryProperty(
 	FreeAndNull(adapterDescriptor);
 	return bRet;
 }
-#if 0
-BOOL SetStreaming(
-	PDEVICE pDevice,
-	DWORD dwDiscSpeedNum
-) {
-#if 1
-	_declspec(align(4)) CDROM_SET_STREAMING setstreaming;
-#endif
-#if 0
-	CDB::_SET_STREAMING cdb = {};
-	cdb.OperationCode = SCSIOP_SET_STREAMING;
-	_declspec(align(4)) PERFORMANCE_DESCRIPTOR pd = {};
-	//	CHAR pd[28] = {};
-	size_t size = sizeof(PERFORMANCE_DESCRIPTOR);
-	REVERSE_BYTES_SHORT(&cdb.ParameterListLength, &size);
-#endif
-#if 1
-	setstreaming.RequestType = CdromSetStreaming;
-	if (0 < dwDiscSpeedNum && dwDiscSpeedNum <= DVD_DRIVE_MAX_SPEED) {
-		setstreaming.ReadSize = 1385 * dwDiscSpeedNum;
-	}
-	else {
-		setstreaming.ReadSize = 1385 * DVD_DRIVE_MAX_SPEED;
-	}
-	setstreaming.ReadTime = 1000;
-	setstreaming.WriteSize = setstreaming.ReadSize;
-	setstreaming.WriteTime = setstreaming.ReadTime;
-	setstreaming.EndLba = 0xffffffff;
-	setstreaming.RestoreDefaults = TRUE;
-#endif
-#if 0
-	pd.RestoreDefaults = TRUE;
-	pd.Exact = TRUE;
-	INT nENDLba = 0x231260;
-	REVERSE_BYTES(&pd.EndLba, &nENDLba);
-	DWORD dwReadSize = 0;
-	if (0 < dwDiscSpeedNum && dwDiscSpeedNum <= DVD_DRIVE_MAX_SPEED) {
-		dwReadSize = 1385 * dwDiscSpeedNum;
-	}
-	else {
-		//		dwReadSize = 1385;
-	}
-	REVERSE_BYTES(&pd.ReadSize, &dwReadSize);
-	DWORD dwReadTime = 1000;
-	REVERSE_BYTES(&pd.ReadTime, &dwReadTime);
-	dwReadSize = 1385;
-	REVERSE_BYTES(&pd.WriteSize, &dwReadSize);
-	REVERSE_BYTES(&pd.WriteTime, &dwReadTime);
-#endif
-	DWORD dwReturned = 0;
-	if (!DeviceIoControl(pDevice->hDevice, IOCTL_CDROM_SET_SPEED
-		, &setstreaming, sizeof(setstreaming), NULL, 0, &dwReturned, NULL)) {
-		OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
-		return FALSE;
-	}
-	else {
-		OutputString("Set the drive speed: %luKB/sec\n"), setstreaming.ReadSize);
-		OutputString("dwReturned: %lu\n"), dwReturned);
-	}
-	return TRUE;
-}
-#endif
+

@@ -68,11 +68,7 @@ BOOL ReadDVDReverse(
 		if (pExtArg->byFua) {
 			cdb.ForceUnitAccess = TRUE;
 		}
-#ifdef _WIN32
-		INT direction = SCSI_IOCTL_DATA_IN;
-#else
-		INT direction = SG_DXFER_FROM_DEV;
-#endif
+
 		BYTE byScsiStatus = 0;
 		UINT uiRetryCnt = 0;
 		FOUR_BYTE LBA;
@@ -81,7 +77,7 @@ BOOL ReadDVDReverse(
 			REVERSE_BYTES(&cdb.LogicalBlock, &LBA);
 
 			if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB12GENERIC_LENGTH, lpBuf,
-				direction, DISC_MAIN_DATA_SIZE, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+				SCSI_XFER_IN, DISC_MAIN_DATA_SIZE, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
 				|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 				if (++uiRetryCnt <= pExtArg->uiMaxRereadNum) {
 					OutputLog(standardOut | fileMainError, "Read retry from %d (Pass %u/%u)\n", nLBA, uiRetryCnt, pExtArg->uiMaxRereadNum);
@@ -300,11 +296,7 @@ BOOL ReadDVD(
 		UINT uiErrorForwardTimes = 0;
 		UINT uiErrorBackTimes = 0;
 		BOOL bSetErrorSectorRange = FALSE;
-#ifdef _WIN32
-		INT direction = SCSI_IOCTL_DATA_IN;
-#else
-		INT direction = SG_DXFER_FROM_DEV;
-#endif
+
 		BYTE byScsiStatus = 0;
 		INT i = 0;
 		UINT uiRetryCnt = 0;
@@ -404,7 +396,7 @@ BOOL ReadDVD(
 			REVERSE_BYTES(&cdb.LogicalBlock, &LBA);
 
 			if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB12GENERIC_LENGTH, lpBuf,
-				direction, DISC_MAIN_DATA_SIZE * transferLen.AsULong, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+				SCSI_XFER_IN, DISC_MAIN_DATA_SIZE * transferLen.AsULong, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
 				|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 				if (IsXbox(pExecType) && !(pDisc->DVD.securitySectorRange[i][0] <= (DWORD)nLBA &&
 					(DWORD)nLBA <= pDisc->DVD.securitySectorRange[i][1] + 1)) {
@@ -543,7 +535,7 @@ BOOL ReadDVD(
 				}
 				REVERSE_BYTES(&cdb.LogicalBlock, &tmpLen);
 				if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB12GENERIC_LENGTH, lpBuf,
-					direction, DISC_MAIN_DATA_SIZE * transferLen.AsULong, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+					SCSI_XFER_IN, DISC_MAIN_DATA_SIZE * transferLen.AsULong, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
 					|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 					throw FALSE;
 				}
@@ -899,12 +891,6 @@ BOOL ReadDVDRaw(
 			dwSectorSize * 13, dwSectorSize * 14, dwSectorSize * 15
 		};
 		UINT uiRetryCnt = 0;
-
-#ifdef _WIN32
-		INT direction = SCSI_IOCTL_DATA_IN;
-#else
-		INT direction = SG_DXFER_FROM_DEV;
-#endif
 		BOOL bRetry = FALSE;
 		BOOL bReadErr = FALSE;
 		BYTE prevId = 0;
@@ -914,7 +900,6 @@ BOOL ReadDVDRaw(
 		if (pDevice->byPlxtrDrive && bNintendoDisc) {
 			bOutputMsg = FALSE;
 		}
-		
 		if (pExtArg->byRange) {
 			if (nStartLBA % transferLen.AsULong) {
 				OutputString("[INFO] startLBA of /ra must be a multiple of 16. It's fixed %d -> %lu\n"
@@ -925,7 +910,6 @@ BOOL ReadDVDRaw(
 			nLast = nLastLBA;
 			sectorNum = (DWORD)(0x30000 + nStartLBA);
 		}
-
 		for (; nLBA < nLast; nLBA += (INT)transferAndMemSize) {
 			if (pExtArg->byFix) {
 				_fseeki64(fpRaw, dwSectorSize * nLBA, SEEK_SET);
@@ -959,7 +943,7 @@ BOOL ReadDVDRaw(
 			REVERSE_BYTES(&ReadCdb.LogicalBlock, &LBA);
 			// store the data frame to the drive cache memory
 			if (!ScsiPassThroughDirect(pExtArg, pDevice, &ReadCdb, CDB12GENERIC_LENGTH, lpBuf,
-				direction, dwReadSize, &byScsiStatus, _T(__FUNCTION__), __LINE__, bOutputMsg)
+				SCSI_XFER_IN, dwReadSize, &byScsiStatus, _T(__FUNCTION__), __LINE__, bOutputMsg)
 				|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 				if (IsSupported0xE7(pDevice)) {
 					FillMemory(lpBuf, dwSectorSize * transferAndMemSize, 0x00);
@@ -1007,7 +991,7 @@ BOOL ReadDVDRaw(
 				DWORD dwOfs2 = dwRawReadSize * i;
 				// read the drive cache memory
 				if (!ScsiPassThroughDirect(pExtArg, pDevice, CacheCmd, cdblen, lpBuf + dwOfs2,
-					direction, dwRawReadSize, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+					SCSI_XFER_IN, dwRawReadSize, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
 					|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 #if 1
 					throw FALSE;
@@ -1202,7 +1186,7 @@ BOOL ReadDVDRaw(
 					REVERSE_BYTES(&ReadCdb.LogicalBlock, &tmpLBA);
 					// delete cache memory
 					if (!ScsiPassThroughDirect(pExtArg, pDevice, &ReadCdb, CDB12GENERIC_LENGTH, lpBuf,
-						direction, dwReadSize, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+						SCSI_XFER_IN, dwReadSize, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
 						|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 						throw FALSE;
 					}
@@ -1289,10 +1273,8 @@ BOOL ReadDVDForCMI(
 ) {
 #ifdef _WIN32
 	_declspec(align(4)) BYTE pBuf[CMI_SIZE] = {};
-	INT direction = SCSI_IOCTL_DATA_IN;
 #else
 	__attribute__((aligned(4))) BYTE pBuf[CMI_SIZE] = {};
-	INT direction = SG_DXFER_FROM_DEV;
 #endif
 
 	CDB::_READ_DVD_STRUCTURE cdb = {};
@@ -1308,8 +1290,8 @@ BOOL ReadDVDForCMI(
 	FOUR_BYTE LBA;
 	for (LBA.AsULong = 0; LBA.AsULong < (ULONG)pDisc->SCSI.nAllLength; LBA.AsULong++) {
 		REVERSE_BYTES(&cdb.RMDBlockNumber, &LBA);
-		if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB12GENERIC_LENGTH, pBuf, 
-			direction, size.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+		if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB12GENERIC_LENGTH, pBuf,
+			SCSI_XFER_IN, size.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
 			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			OutputDiscWithLBALog("Read error\n", (INT)LBA.AsULong);
 		}
@@ -1361,8 +1343,7 @@ BOOL OutputControlDataZone(
 	PEXT_ARG pExtArg,
 	PDEVICE pDevice,
 	PDISC pDisc,
-	LPCTSTR pszFullPath,
-	INT direction
+	LPCTSTR pszFullPath
 ) {
 	_TCHAR szPath[_MAX_PATH] = {};
 	_TCHAR szOutPath[_MAX_PATH] = {};
@@ -1389,7 +1370,7 @@ BOOL OutputControlDataZone(
 	BYTE byScsiStatus = 0;
 	// read the drive cache memory
 	if (!ScsiPassThroughDirect(pExtArg, pDevice, CacheCmd, CDB10GENERIC_LENGTH, lpBuf,
-		direction, DVD_RAW_SECTOR_SIZE_2064 * 16, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+		SCSI_XFER_IN, DVD_RAW_SECTOR_SIZE_2064 * 16, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 	}
 	fwrite(lpBuf, sizeof(BYTE), DVD_RAW_SECTOR_SIZE_2064 * 16, fpCdzRaw);
@@ -1435,10 +1416,8 @@ BOOL ReadDiscStructure(
 ) {
 #ifdef _WIN32
 	_declspec(align(4)) BYTE pBuf[DVD_STRUCTURE_SIZE] = {};
-	INT direction = SCSI_IOCTL_DATA_IN;
 #else
 	__attribute__((aligned(4))) BYTE pBuf[DVD_STRUCTURE_SIZE] = {};
-	INT direction = SG_DXFER_TO_FROM_DEV;
 #endif
 	CDB::_READ_DVD_STRUCTURE cdb = {};
 	cdb.OperationCode = SCSIOP_READ_DVD_STRUCTURE;
@@ -1452,7 +1431,7 @@ BOOL ReadDiscStructure(
 
 	BYTE byScsiStatus = 0;
 	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB12GENERIC_LENGTH,
-		pBuf, direction, Size.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+		pBuf, SCSI_XFER_IN, Size.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
 	}
@@ -1613,7 +1592,7 @@ BOOL ReadDiscStructure(
 		REVERSE_BYTES_SHORT(&cdb.AllocationLength, &formatLen);
 
 		if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB12GENERIC_LENGTH, 
-			lpFormat, direction, formatLen.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE) ||
+			lpFormat, SCSI_XFER_IN, formatLen.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE) ||
 			byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			OutputLog(standardError | fileDisc
 				, "FormatCode: %02x failed\n"
@@ -1624,7 +1603,7 @@ BOOL ReadDiscStructure(
 				, (UCHAR)(cdb.Reserved3 << 6 | cdb.AGID), cdb.Control);
 
 			if (pExtArg->byRawDump && pEntry->FormatCode == DvdManufacturerDescriptor) {
-				OutputControlDataZone(pExtArg, pDevice, pDisc, pszFullPath, direction);
+				OutputControlDataZone(pExtArg, pDevice, pDisc, pszFullPath);
 			}
 			continue;
 		}
@@ -1633,7 +1612,7 @@ BOOL ReadDiscStructure(
 		OutputDiscLog("FormatLength: %u\n", formatLen.AsUShort);
 
 		if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB12GENERIC_LENGTH,
-			lpFormat, direction, formatLen.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE) ||
+			lpFormat, SCSI_XFER_IN, formatLen.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE) ||
 			byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			OutputLog(standardError | fileDisc, "FormatCode: %02x failed\n", pEntry->FormatCode);
 		}
@@ -1675,7 +1654,7 @@ BOOL ReadDiscStructure(
 						cdb.LayerNumber = 1;
 
 						if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB12GENERIC_LENGTH,
-							lpFormat, direction, formatLen.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE) ||
+							lpFormat, SCSI_XFER_IN, formatLen.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE) ||
 							byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 							OutputLog(standardError | fileDisc, "FormatCode: %02x failed\n", pEntry->FormatCode);
 							if (pEntry->FormatCode == DvdPhysicalDescriptor) {
@@ -1818,14 +1797,9 @@ BOOL ReadCapacity(
 	cdb.OperationCode = SCSIOP_READ_CAPACITY;
 
 	BYTE buf[8] = {};
-#ifdef _WIN32
-	INT direction = SCSI_IOCTL_DATA_IN;
-#else
-	INT direction = SG_DXFER_FROM_DEV;
-#endif
 	BYTE scsiStatus = 0;
 	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH,
-		&buf, direction, sizeof(buf), &scsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+		&buf, SCSI_XFER_IN, sizeof(buf), &scsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
 		|| scsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
 	}
@@ -1875,17 +1849,12 @@ BOOL ExtractSecuritySector(
 		cmd[3] = 0x07;
 	}
 	BYTE buf[DISC_MAIN_DATA_SIZE] = {};
-#ifdef _WIN32
-	INT direction = SCSI_IOCTL_DATA_IN;
-#else
-	INT direction = SG_DXFER_FROM_DEV;
-#endif
 	BYTE byScsiStatus = 0;
 	INT i = 0;
 	do {
 		lpCmd[10] = cmd[i];
 		if (!ScsiPassThroughDirect(pExtArg, pDevice, lpCmd, CDB12GENERIC_LENGTH,
-			buf, direction, DISC_MAIN_DATA_SIZE, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+			buf, SCSI_XFER_IN, DISC_MAIN_DATA_SIZE, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
 			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			return FALSE;
 		}
@@ -2008,14 +1977,12 @@ BOOL GetFeatureListForXBox(
 
 #ifdef _WIN32
 	_declspec(align(4)) BYTE buf[26] = {};
-	INT direction = SCSI_IOCTL_DATA_IN;
 #else
 	__attribute__((aligned(4))) BYTE buf[26] = {};
-	INT direction = SG_DXFER_FROM_DEV;
 #endif
 	BYTE scsiStatus = 0;
 	if (!ScsiPassThroughDirect(pExtArg, pDevice, lpCmd, CDB10GENERIC_LENGTH,
-		buf, direction, 26, &scsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+		buf, SCSI_XFER_IN, 26, &scsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
 		|| scsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
 	}
@@ -2081,14 +2048,9 @@ BOOL SetLockState(
 	lpCmd[3] = 0x11;
 	lpCmd[4] = byState;
 
-#ifdef _WIN32
-	INT direction = SCSI_IOCTL_DATA_IN;
-#else
-	INT direction = SG_DXFER_NONE;
-#endif
 	BYTE scsiStatus = 0;
 	if (!ScsiPassThroughDirect(pExtArg, pDevice, lpCmd, CDB10GENERIC_LENGTH,
-		NULL, direction, 0, &scsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+		NULL, SCSI_XFER_NONE, 0, &scsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
 		|| scsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
 	}
@@ -2112,14 +2074,9 @@ BOOL SetErrorSkipState(
 	lpCmd[3] = 0x15;
 	lpCmd[4] = byState;
 
-#ifdef _WIN32
-	INT direction = SCSI_IOCTL_DATA_IN;
-#else
-	INT direction = SG_DXFER_NONE;
-#endif
 	BYTE scsiStatus = 0;
 	if (!ScsiPassThroughDirect(pExtArg, pDevice, lpCmd, CDB10GENERIC_LENGTH,
-		NULL, direction, 0, &scsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+		NULL, SCSI_XFER_NONE, 0, &scsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
 		|| scsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
 	}
@@ -2320,11 +2277,7 @@ BOOL ReadSACD(
 		FOUR_BYTE transferLen;
 		transferLen.AsULong = pDevice->dwMaxTransferLength / DISC_MAIN_DATA_SIZE;
 		REVERSE_BYTES(&cdb.TransferLength, &transferLen);
-#ifdef _WIN32
-		INT direction = SCSI_IOCTL_DATA_IN;
-#else
-		INT direction = SG_DXFER_FROM_DEV;
-#endif
+
 		BYTE byScsiStatus = 0;
 		FOUR_BYTE LBA;
 		for (LBA.AsULong = 0; LBA.AsULong < (DWORD)pDisc->SCSI.nAllLength; LBA.AsULong += transferLen.AsULong) {
@@ -2335,7 +2288,7 @@ BOOL ReadSACD(
 
 			REVERSE_BYTES(&cdb.LogicalBlock, &LBA);
 			if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB12GENERIC_LENGTH, lpBuf,
-				direction, DISC_MAIN_DATA_SIZE * transferLen.AsULong, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+				SCSI_XFER_IN, DISC_MAIN_DATA_SIZE * transferLen.AsULong, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
 				|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 					throw FALSE;
 			}

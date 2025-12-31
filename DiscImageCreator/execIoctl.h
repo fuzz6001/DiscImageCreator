@@ -50,9 +50,3 @@ BOOL StorageQueryProperty(
 	PDEVICE pDevice,
 	LPBOOL lpBusTypeUSB
 );
-#if 0
-BOOL SetStreaming(
-	PDEVICE pDevice,
-	DWORD dwDiscSpeedNum
-);
-#endif
