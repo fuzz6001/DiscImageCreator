@@ -2453,6 +2453,7 @@ int PathSet(char* path, char const* fullpath);
 // https://www.quora.com/How-do-I-check-if-a-file-already-exists-using-C-file-I-O
 int PathFileExists(const char *filename);
 
+int parse_uid_gid_from_sudo(uid_t *out_uid, gid_t *out_gid);
 // http://stackoverflow.com/questions/2336242/recursive-mkdir-system-call-on-unix
 int MakeSureDirectoryPathExists(const char *dir);
 

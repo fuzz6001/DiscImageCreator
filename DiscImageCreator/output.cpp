@@ -25,6 +25,7 @@
 #include "outputScsiCmdLogforDVD.h"
 #include "set.h"
 #include "_external/CheckSector.h"
+#include "_linux/defineForLinux.h"
 
 #ifdef _DEBUG
 _TCHAR logBuffer[DISC_MAIN_DATA_SIZE];
@@ -89,6 +90,17 @@ FILE* CreateOrOpenFile(
 		_tcsncpy(pszOutPath, szDstPath, _MAX_PATH);
 	}
 	FILE* fp = _tfopen(szDstPath, pszMode);
+#ifndef _WIN32
+	if (geteuid() == 0) {
+		uid_t uid; gid_t gid;
+		if (parse_uid_gid_from_sudo(&uid, &gid)) {
+			if (fchown(fileno(fp), uid, gid) != 0) {
+				OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+			}
+		}
+	}
+#endif
+	
 #ifdef UNICODE
 	// delete bom
 	fseek(fp, 0, SEEK_SET);
@@ -123,6 +135,16 @@ FILE* OpenProgrammabledFile(
 #endif
 		szFullPathName[_MAX_PATH + _MAX_FNAME - 1] = 0;
 		fp = _tfopen(szFullPathName, pszMode);
+#ifndef _WIN32
+		if (geteuid() == 0) {
+			uid_t uid; gid_t gid;
+			if (parse_uid_gid_from_sudo(&uid, &gid)) {
+				if (fchown(fileno(fp), uid, gid) != 0) {
+					OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+				}
+			}
+		}
+#endif
 	}
 	return fp;
 }

@@ -262,9 +262,9 @@ void _makepath(char* Path, const char* Drive, const char* Directory,
 
 int PathSet(char* path, char const* fullpath)
 {
-       strcpy(path, fullpath);
+	strcpy(path, fullpath);
 
-       return 1; /* not sure when this function would 'fail' */
+	return 1; /* not sure when this function would 'fail' */
 }
 
 // http://stackoverflow.com/questions/3218201/find-a-replacement-for-windows-pathappend-on-gnu-linux
@@ -295,8 +295,35 @@ int PathAppend(char* path, char const* more)
 int PathFileExists(const char *filename)
 {
 	FILE *fp = fopen(filename, "r");
-	if (fp != NULL) fclose(fp);
+	if (fp != NULL) {
+		fclose(fp);
+	}
 	return (fp != NULL);
+}
+
+int parse_uid_gid_from_sudo(uid_t *out_uid, gid_t *out_gid)
+{
+	const char *su = getenv("SUDO_UID");
+	const char *sg = getenv("SUDO_GID");
+	if (!su || !sg) {
+		return 0;
+	}
+
+    char *end = NULL;
+    unsigned long u = strtoul(su, &end, 10);
+	if (!end || *end != '\0') {
+		return 0;
+	}
+
+    end = NULL;
+    unsigned long g = strtoul(sg, &end, 10);
+	if (!end || *end != '\0') {
+		return 0;
+	}
+
+    *out_uid = (uid_t)u;
+    *out_gid = (gid_t)g;
+    return 1;
 }
 
 int MakeSureDirectoryPathExists(const char *dir)
@@ -309,39 +336,50 @@ int MakeSureDirectoryPathExists(const char *dir)
 		errno = EINVAL;
 		return 0;
 	}
-
 	if (strlen(dir) >= sizeof(tmp)) {
 		errno = ENAMETOOLONG;
 		return 0;
 	}
-
 	snprintf(tmp, sizeof(tmp), "%s", dir);
 	len = strlen(tmp);
 	if (len == 0) {
 		errno = EINVAL;
 		return 0;
 	}
-
 	if (tmp[len - 1] == '/' && len > 1) {
 		tmp[len - 1] = '\0';
 	}
-
+	uid_t target_uid = (uid_t)-1;
+	gid_t target_gid = (gid_t)-1;
+	int need_chown = 0;
+	if (geteuid() == 0) {
+		if (parse_uid_gid_from_sudo(&target_uid, &target_gid)) {
+			need_chown = 1;
+		}
+	}
 	for (p = tmp + 1; *p; p++) {
 		if (*p == '/') {
 			*p = '\0';
-			if (mkdir(tmp, 0777) != 0) {
-				if (errno != EEXIST) {
-					return 0;
+			if (mkdir(tmp, 0755) == 0) {
+				if (need_chown) {
+					if (chown(tmp, target_uid, target_gid) != 0) {
+						fprintf(stderr, "Failed to chown");
+					}
 				}
+			} else if (errno != EEXIST) {
+			    return 0;
 			}
 			*p = '/';
 		}
 	}
-
-	if (mkdir(tmp, 0777) != 0) {
-		if (errno != EEXIST) {
-			return 0;
+	if (mkdir(tmp, 0755) == 0) {
+		if (need_chown) {
+			if (chown(tmp, target_uid, target_gid) != 0) {
+				fprintf(stderr, "Failed to chown");
+			}
 		}
+	} else if (errno != EEXIST) {
+	    return 0;
 	}
 
 	return 1;
@@ -616,79 +654,82 @@ SCSITaskDeviceInterface** interface;
 
 SCSITaskInterface** GetSCSITaskInterface(char* path)
 {
-#if 0
-	io_service_t service = IORegistryEntryFromPath(kIOMasterPortDefault, path);
-#else
+	const char* bsdName = path;
+	const char* slash = strrchr(path, '/');
+	if (slash) {
+		bsdName = slash + 1;   // "/dev/disk2" -> "disk2"
+	}
 	// Create the dictionaries
-	CFMutableDictionaryRef matchingDict = CFDictionaryCreateMutable(kCFAllocatorDefault, 0, NULL, NULL);
-	CFMutableDictionaryRef subDict      = CFDictionaryCreateMutable(kCFAllocatorDefault, 0, NULL, NULL);
+	CFMutableDictionaryRef matchingDict = CFDictionaryCreateMutable(
+		kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks,	&kCFTypeDictionaryValueCallBacks);
+	CFMutableDictionaryRef subDict      = CFDictionaryCreateMutable(
+		kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks,	&kCFTypeDictionaryValueCallBacks);
 
 	// Create a dictionary with the "SCSITaskDeviceCategory" key = "SCSITaskAuthoringDevice"
-	CFDictionarySetValue(subDict, CFSTR(kIOPropertySCSITaskDeviceCategory), CFSTR(kIOPropertySCSITaskAuthoringDevice));
+	CFDictionarySetValue(subDict
+		, CFSTR(kIOPropertySCSITaskDeviceCategory), CFSTR(kIOPropertySCSITaskAuthoringDevice));
 
 	// Add the dictionary to the main dictionary with the key "IOPropertyMatch" to
 	// narrow the search to the above dictionary.
 	CFDictionarySetValue(matchingDict, CFSTR(kIOPropertyMatchKey), subDict);
 
+	CFRelease(subDict);
+
 	io_iterator_t iterator = 0;
-	IOServiceGetMatchingServices(kIOMasterPortDefault, matchingDict, &iterator);
+	kern_return_t err = IOServiceGetMatchingServices(kIOMasterPortDefault, matchingDict, &iterator);
+	if (err != KERN_SUCCESS || !iterator) {
+		fprintf(stderr, "IOServiceGetMatchingServices failed: 0x%x\n", err);
+		return NULL;
+	}
+	io_service_t service = IO_OBJECT_NULL;
+	io_service_t tmp;
+	while ((tmp = IOIteratorNext(iterator))) {
+		io_name_t service_class = "";
+		io_string_t service_path = "";
+		IORegistryEntryGetPath(tmp, kIOServicePlane, service_path);
+		IOObjectGetClass(tmp, service_class);
 
-	io_service_t service = 0;
-	if (iterator) {
-		io_service_t tmp;
-		do {
-			tmp = IOIteratorNext(iterator);
-			if (tmp) {
-				io_name_t service_class = "";
-				io_string_t service_path = "";
-				IORegistryEntryGetPath(tmp, kIOServicePlane, service_path);
-				IOObjectGetClass(tmp, service_class);
-				printf("Class: %s\nPath: %s\n", service_class, service_path);
-				service = tmp;
+		CFStringRef cat = (CFStringRef)IORegistryEntryCreateCFProperty(
+			tmp, CFSTR(kIOPropertySCSITaskDeviceCategory), kCFAllocatorDefault, 0);
+		if (cat) {
+			char buf[128];
+			if (CFStringGetCString(cat, buf, sizeof(buf), kCFStringEncodingUTF8)) {
+				if (strcmp(buf, kIOPropertySCSITaskAuthoringDevice) == 0) {
+					printf("Class: %s\nPath: %s\n", service_class, service_path);
+					service = tmp;
+					CFRelease(cat);
+					break;
+				}
 			}
-		} while (tmp);
-		IOObjectRelease(iterator);
+			CFRelease(cat);
+		}
+
+		IOObjectRelease(tmp);
 	}
+	IOObjectRelease(iterator);
 	if (!service) {
+		fprintf(stderr, "Not found SCSITaskAuthoringDevice\n");
 		return NULL;
 	}
-#endif
-	CFStringRef deviceNameFromReg;
-	if ((deviceNameFromReg = (CFStringRef)IORegistryEntrySearchCFProperty(
-		(io_registry_entry_t)service, kIOServicePlane, CFSTR(kIOBSDNameKey)
-		, kCFAllocatorDefault, kIORegistryIterateRecursively)) == NULL) {
-		fprintf(stderr, "Failed: IORegistryEntrySearchCFProperty\n");
-		return NULL;
-	}
-
-	char deviceName[_MAX_FNAME];
-	if (CFStringGetCString(deviceNameFromReg, deviceName, sizeof(deviceName), kCFStringEncodingUTF8) == FALSE) {
-		fprintf(stderr, "Failed: CFStringGetCString\n");
-		return NULL;
+	CFTypeRef prop = IORegistryEntryCreateCFProperty(service, CFSTR("IOCFPlugInTypes"), kCFAllocatorDefault, 0);
+	if (!prop) {
+	    fprintf(stderr, "Not found IOCFPlugInTypes\n");
+	} else {
+	    fprintf(stderr, "IOCFPlugInTypes:\n");
+	    CFShow(prop);
+	    CFRelease(prop);
 	}
 
-	char* unmountCmd;
-	const char* cmd = "sudo /usr/sbin/diskutil unmountDisk";
-	const char* devNull = "> /dev/null";
-	size_t cmdLen = strlen(cmd) + strlen(deviceName) + strlen(devNull) + 3;
-	if ((unmountCmd = (char*)malloc(cmdLen)) == NULL) {
-		fprintf(stderr, "Failed: malloc\n");
-		return NULL;
-	}
-	snprintf(unmountCmd, cmdLen, "%s %s %s", cmd, deviceName, devNull);
+	char unmountCmd[256];
+	snprintf(unmountCmd, sizeof(unmountCmd),
+		"diskutil unmountDisk %s > /dev/null", bsdName);
 	printf("unmountCmd: %s\n", unmountCmd);
-	CFRelease(deviceNameFromReg);
-
 	if (system(unmountCmd) != 0) {
-		free(unmountCmd);
-		fprintf(stderr, "Failed: system\n");
-		return NULL;
+		fprintf(stderr, "Failed: system(unmountDisk)\n");
 	}
-	free(unmountCmd);
 
 	SInt32        score;
 	HRESULT       herr;
-	kern_return_t err;
 
 	// Create the IOCFPlugIn interface so we can query it.
 	if (noErr != (err = IOCreatePlugInInterfaceForService(
