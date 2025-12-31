@@ -25,7 +25,9 @@
 #include "outputScsiCmdLogforDVD.h"
 #include "set.h"
 #include "_external/CheckSector.h"
+#ifndef _WIN32
 #include "_linux/defineForLinux.h"
+#endif
 
 #ifdef _DEBUG
 _TCHAR logBuffer[DISC_MAIN_DATA_SIZE];
