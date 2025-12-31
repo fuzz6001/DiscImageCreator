@@ -3354,21 +3354,6 @@ VOID OutputReadBufferCapacity(
 			MAKEWORD(pReadBufCapaData->AvailableBufferSize[1], pReadBufCapaData->AvailableBufferSize[0])) / 1024);
 }
 
-VOID OutputSetSpeed(
-	PCDROM_SET_SPEED pSetspeed
-) {
-	OutputDriveLog(
-		OUTPUT_DHYPHEN_PLUS_STR("SetSpeed")
-		"\t    RequestType: %s\n"
-		"\t      ReadSpeed: %uKB/sec\n"
-		"\t     WriteSpeed: %uKB/sec\n"
-		"\tRotationControl: %s\n",
-		pSetspeed->RequestType == 0 ? _T("CdromSetSpeed") : _T("CdromSetStreaming"),
-		pSetspeed->ReadSpeed,
-		pSetspeed->WriteSpeed,
-		pSetspeed->RotationControl == 0 ? _T("CdromDefaultRotation") : _T("CdromCAVRotation"));
-}
-
 VOID OutputEepromUnknownByte(
 	LPBYTE pBuf,
 	UINT startIdx,

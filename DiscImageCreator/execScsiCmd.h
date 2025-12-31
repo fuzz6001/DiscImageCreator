@@ -111,6 +111,12 @@ BOOL SetDiscSpeed(
 	UINT uiDiscSpeedNum
 );
 
+BOOL SetStreaming(
+	PEXT_ARG pExtArg,
+	PDEVICE pDevice,
+	DWORD dwDiscSpeedNum
+);
+
 BOOL SetSpeedRead(
 	PEXT_ARG pExtArg,
 	PDEVICE pDevice,

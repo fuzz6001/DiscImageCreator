@@ -901,64 +901,46 @@ BOOL SetDiscSpeed(
 	PDEVICE pDevice,
 	UINT uiDiscSpeedNum
 ) {
-//	if ((*pExecType == cd || *pExecType == gd || *pExecType == audio || *pExecType == data)
-//		&& (pDevice->FEATURE.bySetCDSpeed || *pExecType == dvd)) {
-		WORD wSpeed = 0;
-		// https://msdn.microsoft.com/en-us/library/windows/hardware/ff551368(v=vs.85).aspx
-		// https://msdn.microsoft.com/ja-jp/library/ff551396(v=vs.85).aspx
+	WORD wSpeed = 0;
+	// https://msdn.microsoft.com/en-us/library/windows/hardware/ff551368(v=vs.85).aspx
+	// https://msdn.microsoft.com/ja-jp/library/ff551396(v=vs.85).aspx
 #ifdef _WIN32
-		_declspec(align(4)) CDROM_SET_SPEED setspeed = { CdromSetSpeed, 0, 0, CdromDefaultRotation };
-		INT direction = SCSI_IOCTL_DATA_IN;
+	INT direction = SCSI_IOCTL_DATA_UNSPECIFIED;
 #else
-		__attribute__((aligned(4))) CDROM_SET_SPEED setspeed = { CdromSetSpeed, 0, 0, CdromDefaultRotation };
-		INT direction = SG_DXFER_TO_DEV;
+	INT direction = SG_DXFER_NONE;
 #endif
-		if ((*pExecType == cd || *pExecType == swap || *pExecType == gd || *pExecType == audio || *pExecType == data) &&
-			0 < uiDiscSpeedNum && uiDiscSpeedNum <= CD_DRIVE_MAX_SPEED) {
-			// http://senbee.seesaa.net/article/26247159.html
-			// 2048 x 75 = 153600 B -> 150 KiB
-			// 2352 x 75 = 176400 B -> 172,265625 KiB
-			wSpeed = (WORD)(CD_RAW_SECTOR_SIZE * 75 * uiDiscSpeedNum / 1000);
-			setspeed.ReadSpeed = wSpeed;
-		}
-		else if ((*pExecType == dvd || IsXbox(pExecType)) &&
-			0 < uiDiscSpeedNum && uiDiscSpeedNum <= DVD_DRIVE_MAX_SPEED) {
-			// Read and write speeds for the first DVD drives and players were of
-			// 1,385 kB/s (1,353 KiB/s); this speed is usually called "1x".
-			// 2048 x 75 x 9 = 1384448 B -> 1352 KiB
-			wSpeed = (WORD)(1385 * uiDiscSpeedNum);
-			setspeed.ReadSpeed = wSpeed;
-		}
-		else if ((*pExecType == bd) &&
-			0 < uiDiscSpeedNum && uiDiscSpeedNum <= BD_DRIVE_MAX_SPEED) {
-			wSpeed = (WORD)(4496 * uiDiscSpeedNum);
-			setspeed.ReadSpeed = wSpeed;
-		}
-		else {
-			wSpeed = 0xffff;
-			setspeed.ReadSpeed = pDevice->wMaxReadSpeed;
-		}
-		CDB::_SET_CD_SPEED cdb = {};
-		cdb.OperationCode = SCSIOP_SET_CD_SPEED;
-		TWO_BYTE size;
-		size.AsUShort = wSpeed;
-		REVERSE_BYTES_SHORT(&cdb.ReadSpeed, &size);
-		// https://msdn.microsoft.com/en-us/library/windows/hardware/ff551370(v=vs.85).aspx
-		setspeed.RequestType = CdromSetSpeed;
+	if ((*pExecType == cd || *pExecType == swap || *pExecType == gd || *pExecType == audio || *pExecType == data) &&
+		0 < uiDiscSpeedNum && uiDiscSpeedNum <= CD_DRIVE_MAX_SPEED) {
+		// http://senbee.seesaa.net/article/26247159.html
+		// 2048 x 75 = 153600 B -> 150 KiB
+		// 2352 x 75 = 176400 B -> 172,265625 KiB
+		wSpeed = (WORD)(CD_RAW_SECTOR_SIZE * 75 * uiDiscSpeedNum / 1000);
+	}
+	else if ((*pExecType == dvd || IsXbox(pExecType)) &&
+		0 < uiDiscSpeedNum && uiDiscSpeedNum <= DVD_DRIVE_MAX_SPEED) {
+		// Read and write speeds for the first DVD drives and players were of
+		// 1,385 kB/s (1,353 KiB/s); this speed is usually called "1x".
+		// 2048 x 75 x 9 = 1384448 B -> 1352 KiB
+		wSpeed = (WORD)(1385 * uiDiscSpeedNum);
+	}
+	else {
+		wSpeed = 0xffff;
+	}
+	CDB::_SET_CD_SPEED cdb = {};
+	cdb.OperationCode = SCSIOP_SET_CD_SPEED;
+	TWO_BYTE size;
+	size.AsUShort = wSpeed;
+	REVERSE_BYTES_SHORT(&cdb.ReadSpeed, &size);
+	// https://msdn.microsoft.com/en-us/library/windows/hardware/ff551370(v=vs.85).aspx
 
-		BYTE byScsiStatus = 0;
-		if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB12GENERIC_LENGTH, &setspeed, 
-			direction, sizeof(CDROM_SET_SPEED), &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
-			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
-			// Somehow PX-W1210S fails...
-			OutputDriveNoSupportLog("SET_CD_SPEED");
-			OutputDriveLog("Or if you use the SATA/IDE to USB adapter, doesn't support this command\n");
-		}
-		else {
-			OutputSetSpeed(&setspeed);
-			OutputString("Set the drive speed: %uKB/sec\n", setspeed.ReadSpeed);
-		}
-//	}
+	BYTE byScsiStatus = 0;
+	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB12GENERIC_LENGTH, NULL,
+		direction, 0, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
+		// Somehow PX-W1210S fails...
+		OutputDriveNoSupportLog("SET_CD_SPEED");
+		OutputDriveLog("Or if you use the SATA/IDE to USB adapter, doesn't support this command\n");
+	}
 	return TRUE;
 }
 
@@ -967,7 +949,6 @@ BOOL SetStreaming(
 	PDEVICE pDevice,
 	DWORD dwDiscSpeedNum
 ) {
-	UNREFERENCED_PARAMETER(dwDiscSpeedNum);
 	CDB::_SET_STREAMING cdb = {};
 	cdb.OperationCode = SCSIOP_SET_STREAMING;
 #ifdef _WIN32
@@ -978,21 +959,24 @@ BOOL SetStreaming(
 	TWO_BYTE size;
 	size.AsUShort = sizeof(PERFORMANCE_DESCRIPTOR);
 	REVERSE_BYTES_SHORT(&cdb.ParameterListLength, &size);
-#if 1
-	FOUR_BYTE LBA;
-	LBA.AsULong = 0x7FFFFFFF;
-	REVERSE_BYTES(&pd.EndLba, &LBA);
-	FOUR_BYTE RSize;
-	RSize.AsULong = 0;
-	REVERSE_BYTES(&pd.ReadSize, &RSize);
-	FOUR_BYTE WSize;
-	WSize.AsULong = 0;
-	REVERSE_BYTES(&pd.WriteSize, &WSize);
 
-//	INT nTime = 0x3e8;
-//	REVERSE_BYTES(&pd.ReadTime, &nTime);
-//	REVERSE_BYTES(&pd.WriteTime, &nTime);
-#endif
+	FOUR_BYTE v;
+	v.AsULong = 0;
+	REVERSE_BYTES(&pd.StartLba, &v);
+	v.AsULong = 0xFFFFFFFF;
+	REVERSE_BYTES(&pd.EndLba, &v);
+	if (0 < dwDiscSpeedNum && dwDiscSpeedNum <= BD_DRIVE_MAX_SPEED) {
+		v.AsULong = 4496 * dwDiscSpeedNum;
+	}
+	else {
+		v.AsULong = 0xFFFFFFFF;
+	}
+	REVERSE_BYTES(&pd.ReadSize, &v);
+	REVERSE_BYTES(&pd.WriteSize, &v);
+	v.AsULong = 1000;
+	REVERSE_BYTES(&pd.ReadTime, &v);
+	REVERSE_BYTES(&pd.WriteTime, &v);
+
 #ifdef _WIN32
 	INT direction = SCSI_IOCTL_DATA_OUT;
 #else
@@ -1004,35 +988,6 @@ BOOL SetStreaming(
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
 	}
-	OutputDriveLog(
-		OUTPUT_DHYPHEN_PLUS_STR("SetStreaming")
-		"\t        RandomAccess: %s\n"
-		"\t               Exact: %s\n"
-		"\t     RestoreDefaults: %s\n"
-		"\tWriteRotationControl: %s\n"
-		"\t            StartLba: %u (%x)\n"
-		"\t              EndLba: %u (%x)\n"
-		"\t            ReadSize: %u (%x)\n"
-		"\t            ReadTime: %u (%x)\n"
-		"\t           WriteSize: %u (%x)\n"
-		"\t           WriteTime: %u (%x)\n"
-		, BOOLEAN_TO_STRING_YES_NO(pd.RandomAccess)
-		, BOOLEAN_TO_STRING_YES_NO(pd.Exact)
-		, BOOLEAN_TO_STRING_YES_NO(pd.RestoreDefaults)
-		, BOOLEAN_TO_STRING_YES_NO(pd.WriteRotationControl)
-		, MAKEUINT(MAKEWORD(pd.StartLba[3], pd.StartLba[2]), MAKEWORD(pd.StartLba[1], pd.StartLba[0]))
-		, MAKEUINT(MAKEWORD(pd.StartLba[3], pd.StartLba[2]), MAKEWORD(pd.StartLba[1], pd.StartLba[0]))
-		, MAKEUINT(MAKEWORD(pd.EndLba[3], pd.EndLba[2]), MAKEWORD(pd.EndLba[1], pd.EndLba[0]))
-		, MAKEUINT(MAKEWORD(pd.EndLba[3], pd.EndLba[2]), MAKEWORD(pd.EndLba[1], pd.EndLba[0]))
-		, MAKEUINT(MAKEWORD(pd.ReadSize[3], pd.ReadSize[2]), MAKEWORD(pd.ReadSize[1], pd.ReadSize[0]))
-		, MAKEUINT(MAKEWORD(pd.ReadSize[3], pd.ReadSize[2]), MAKEWORD(pd.ReadSize[1], pd.ReadSize[0]))
-		, MAKEUINT(MAKEWORD(pd.ReadTime[3], pd.ReadTime[2]), MAKEWORD(pd.ReadTime[1], pd.ReadTime[0]))
-		, MAKEUINT(MAKEWORD(pd.ReadTime[3], pd.ReadTime[2]), MAKEWORD(pd.ReadTime[1], pd.ReadTime[0]))
-		, MAKEUINT(MAKEWORD(pd.WriteSize[3], pd.WriteSize[2]), MAKEWORD(pd.WriteSize[1], pd.WriteSize[0]))
-		, MAKEUINT(MAKEWORD(pd.WriteSize[3], pd.WriteSize[2]), MAKEWORD(pd.WriteSize[1], pd.WriteSize[0]))
-		, MAKEUINT(MAKEWORD(pd.WriteTime[3], pd.WriteTime[2]), MAKEWORD(pd.WriteTime[1], pd.WriteTime[0]))
-		, MAKEUINT(MAKEWORD(pd.WriteTime[3], pd.WriteTime[2]), MAKEWORD(pd.WriteTime[1], pd.WriteTime[0]))
-	);
 	return TRUE;
 }
 
@@ -1418,18 +1373,14 @@ BOOL ReadDriveInformation(
 			pDevice->FEATURE.byModePage2a = TRUE;
 		}
 		if (*pExecType != drivespeed) {
-#if 0
-			if (*pExecType == dvd) {
+			if (*pExecType == bd) {
 				SetStreaming(pExtArg, pDevice, uiCDSpeed);
 			}
 			else {
-#endif
 				if (uiCDSpeed != 0) {
 					SetDiscSpeed(pExecType, pExtArg, pDevice, uiCDSpeed);
 				}
-#if 0
 			}
-#endif
 			ReadBufferCapacity(pExtArg, pDevice);
 		}
 	}

@@ -72,10 +72,6 @@ VOID OutputReadBufferCapacity(
 	PREAD_BUFFER_CAPACITY_DATA pReadBufCapaData
 );
 
-VOID OutputSetSpeed(
-	PCDROM_SET_SPEED pSetspeed
-);
-
 VOID OutputEeprom(
 	PDEVICE pDevice,
 	LPBYTE pBuf,
