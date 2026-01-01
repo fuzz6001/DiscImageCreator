@@ -288,10 +288,10 @@ See [wiki](https://github.com/saramibreak/DiscImageCreator/wiki)
       https://docs.microsoft.com/en-us/windows/wsl/install-win10
 
 - Linux
-  - GCC, make
+  - zlib1g-dev, libarchive, libssl-dev
 
 - macOS
-  - Clang, make, MacOSX.sdk
+  - MacOSX.sdk, libarchive, openssl@3
 
 ## License & Copyright
 See LICENSE  
@@ -299,14 +299,18 @@ See LICENSE
   prngcd.cpp  
     Copyright (c) 2015 Jonathan Gevaryahu. All rights reserved.  
 
-  aes.cpp, aesni.cpp, platform_util.cpp, mbedtls folder  
+  aes.c, aesni.c, platform_util.c, mbedtls folder  
     https://github.com/ARMmbed/mbedtls  
     Apache License Version 2.0  
     Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
 
-  abgx360.cpp  
-    http://abgx360.cc/  
+  abgx360.c  
+    https://web.archive.org/web/20201123161416/http://abgx360.cc/  
     Copyright 2008-2012 by Seacrest <Seacrest[at]abgx360[dot]net>
+
+  libunshield  
+    https://github.com/twogood/unshield  
+    Unshield uses the MIT license.
 
   rijndael-alg-fst.cpp/h  
     Vincent Rijmen <vincent.rijmen@esat.kuleuven.ac.be>  
