@@ -492,10 +492,17 @@ BOOL ReadDVD(
 				uiErrorForwardTimes = 0;
 			}
 			if (bErrorBack) {
-				OutputLog(standardOut | fileMainError, STR_LBA "Read back a sector\n", nLBA, (UINT)nLBA);
-				nLBA -= 2;
-				uiErrorBackTimes = 0;
-				continue;
+				if (nFirstErrorLBA < nLBA) {
+					OutputLog(standardOut | fileMainError, STR_LBA "Read back a sector\n", nLBA, (UINT)nLBA);
+					nLBA -= 2;
+					uiErrorBackTimes = 0;
+					continue;
+				}
+				else if (nFirstErrorLBA == nLBA) {
+					nFirstErrorLBA = 0;
+					bErrorBack = FALSE;
+					OutputLog(standardOut | fileMainError, "%d is read. Reset 1st error LBA\n", nLBA);
+				}
 			}
 			if (uiRetryCnt) {
 				OutputLog(standardOut | fileMainError, "LBA %d is retry OK\n", nLBA);
