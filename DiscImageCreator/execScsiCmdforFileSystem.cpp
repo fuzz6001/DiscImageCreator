@@ -163,6 +163,8 @@ BOOL IsValidExtent(
 	return FALSE;
 }
 
+// http://forum.redump.org/post/101790/#p101790
+//#define TBL_TEST
 BOOL ReadDirectoryRecordDetail(
 	PEXEC_TYPE pExecType,
 	PEXT_ARG pExtArg,
@@ -179,8 +181,18 @@ BOOL ReadDirectoryRecordDetail(
 	PPATH_TABLE_RECORD pPathTblRec,
 	UINT uiPathTblIdx
 ) {
-#ifdef LATIN1_TEST
-	memcpy(lpBuf, dirTblWithLatin1, sizeof(dirTblWithLatin1));
+#ifdef TBL_TEST
+	CHAR buf[_MAX_PATH] = {};
+	_snprintf(buf, sizeof(buf), "../test/dirTbl_DESTROYERCOMMAND_lba%d.bin", nLBA);
+	FILE* fp = CreateOrOpenFile(buf, NULL, NULL, NULL, NULL, _T(".bin"), _T("rb"), 0, 0);
+	if (!fp) {
+		OutputErrorString("[ERROR] Failed to open file [%s]\n", buf);
+		return FALSE;
+	}
+	DWORD dwFileSize = GetFileSize(0, fp);
+	fread(lpBuf, 1, dwFileSize, fp);
+	byTransferLen = (BYTE)(dwFileSize / DISC_MAIN_DATA_SIZE);
+	FcloseAndNull(fp);
 #else
 	if (!ExecReadDisc(pExecType, pExtArg, pDevice, pDisc
 		, pCdb, nLBA + nOffset, lpBuf, bufDec, byTransferLen, _T(__FUNCTION__), __LINE__)) {
@@ -295,6 +307,12 @@ BOOL ReadDirectoryRecordDetail(
 				if (lpDirRec[32] % 2 == 0) {
 					nDirOfs++;
 				}
+
+				CONST UCHAR fileIdLen = (UCHAR)lpDirRec[32];
+				CONST PUCHAR fileId = (CONST PUCHAR)&lpDirRec[33];
+				CONST INT isDotOrDotDot =
+					(fileIdLen == 1 && (fileId[0] == 0x00 || fileId[0] == 0x01));
+
 				if (nDirOfs < lpDirRec[0]) {
 					OutputVolDescLog("LBA %d, Check if the directory record length (%u) is really correct -> ", nLBA, lpDirRec[0]);
 					// Check incorrect directory record length
@@ -302,9 +320,7 @@ BOOL ReadDirectoryRecordDetail(
 					BOOL bAllZero = TRUE;
 					UINT k = uiOfs / DISC_MAIN_DATA_SIZE + 1;
 
-					if (DISC_MAIN_DATA_SIZE * k - (uiOfs + lpDirRec[0]) >= MIN_LEN_DR &&
-						!(lpDirRec[32] == 1 && szCurDirName[0] == 0) &&
-						!(lpDirRec[32] == 1 && szCurDirName[0] == 1)) {
+					if (DISC_MAIN_DATA_SIZE * k - (uiOfs + lpDirRec[0]) >= MIN_LEN_DR && !isDotOrDotDot) {
 						for (INT a = 0; a < 32; a++) {
 							if (lpNextDirRec[a] != 0) {
 								bAllZero = FALSE;
@@ -337,8 +353,7 @@ BOOL ReadDirectoryRecordDetail(
 					uiOfs += lpDirRec[0];
 				}
 				// not upper and current directory
-				if (!(lpDirRec[32] == 1 && szCurDirName[0] == 0) &&
-					!(lpDirRec[32] == 1 && szCurDirName[0] == 1)) {
+				if (!isDotOrDotDot) {
 					if ((lpDirRec[25] & 0x02 || (pDisc->SCSI.byFormat == DISK_TYPE_CDI && lpDirRec[25] == 0))) {
 						for (UINT i = 1; i < uiDirPosNum; i++) {
 							if (uiExtentPos == pPathTblRec[i].uiPosOfDir) {
@@ -541,9 +556,9 @@ BOOL ReadPathTableRecord(
 	PPATH_TABLE_RECORD pPathTblRec,
 	LPUINT uiDirPosNum
 ) {
-#ifdef LATIN1_TEST
-	uiPathTblPos = 20;
-	uiPathTblSize = 46612;
+#ifdef TBL_TEST
+	uiPathTblPos = 22;
+	uiPathTblSize = 2048;
 #endif
 	BYTE byTransferLen = 1;
 	BYTE byRoop = byTransferLen;
@@ -609,8 +624,11 @@ BOOL ReadPathTableRecord(
 			else {
 				OutputMainInfoLog("uiPathTblPos: %u, uiPathTblSize: %u, byTransferLen: %d [L:%d]\n"
 					, uiPathTblPos + nSectorOfs, uiPathTblSize, byRoop, __LINE__);
-#ifdef LATIN1_TEST
-				memcpy(lpBuf, pathTblWithLatin1, sizeof(pathTblWithLatin1));
+#ifdef TBL_TEST
+				FILE* fp = CreateOrOpenFile(_T("../test/pathTbl_DESTROYERCOMMAND_lba22"), NULL, NULL, NULL, NULL, _T(".bin"), _T("rb"), 0, 0);
+				DWORD dwFileSize = GetFileSize(0, fp);
+				fread(lpBuf, 1, dwFileSize, fp);
+				FcloseAndNull(fp);
 #else
 				if (!ExecReadDisc(pExecType, pExtArg, pDevice, pDisc, pCdb
 					, (INT)uiPathTblPos + nSectorOfs, lpBuf, bufDec, byTransferLen, _T(__FUNCTION__), __LINE__)) {
