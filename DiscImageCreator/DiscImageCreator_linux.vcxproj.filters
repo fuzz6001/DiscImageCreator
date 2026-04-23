@@ -326,9 +326,6 @@
     <ClInclude Include="_external\mbedtls\threading.h">
       <Filter>_external\mbedtls</Filter>
     </ClInclude>
-    <ClInclude Include="buildDateTime.h">
-      <Filter>header</Filter>
-    </ClInclude>
     <ClInclude Include="outputFileSystem.h">
       <Filter>header</Filter>
     </ClInclude>
