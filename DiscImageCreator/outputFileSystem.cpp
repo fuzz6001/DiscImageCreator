@@ -118,9 +118,12 @@ VOID OutputFsDirectoryRecord(
 
 	CHAR strTmpFull[_MAX_PATH] = {};
 	// not upper and current directory
-	if (pPathTblRec &&
-		!(lpBuf[32] == 1 && fname[0] == 0) &&
-		!(lpBuf[32] == 1 && fname[0] == 1)) {
+	CONST UCHAR fileIdLen = (UCHAR)lpBuf[32];
+	CONST PUCHAR fileId = (CONST PUCHAR)&lpBuf[33];
+	CONST INT isDotOrDotDot =
+		(fileIdLen == 1 && (fileId[0] == 0x00 || fileId[0] == 0x01));
+
+	if (pPathTblRec && !isDotOrDotDot) {
 		LPCH pName[_MAX_FNAME] = {};
 		INT fullIdx = 0;
 		pName[fullIdx++] = fname;
@@ -547,6 +550,7 @@ BOOL OutputFsPathTableRecord(
 			else {
 				pPathTblRec[*uiDirPosNum].uiNumOfUpperDir = MAKEWORD(lpBuf[7 + i], lpBuf[6 + i]);
 			}
+			size_t dst = 0;
 			OutputVolDescLog(
 				"\t     Length of Directory Identifier: %u\n"
 				"\tLength of Extended Attribute Record: %u\n"
@@ -556,12 +560,10 @@ BOOL OutputFsPathTableRecord(
 				, pPathTblRec[*uiDirPosNum].uiDirNameLen, lpBuf[1 + i]
 				, pPathTblRec[*uiDirPosNum].uiPosOfDir, pPathTblRec[*uiDirPosNum].uiNumOfUpperDir);
 			for (size_t n = 0; n < pPathTblRec[*uiDirPosNum].uiDirNameLen; n++) {
-#ifndef _WIN32
-				if (lpBuf[8 + i + n] == 0) continue;
-#endif
 				OutputVolDescLog("%c", lpBuf[8 + i + n]);
-				pPathTblRec[*uiDirPosNum].szDirName[n] = (CHAR)lpBuf[8 + i + n];
+				pPathTblRec[*uiDirPosNum].szDirName[dst++] = (CHAR)lpBuf[8 + i + n];
 			}
+			pPathTblRec[*uiDirPosNum].szDirName[dst] = '\0';
 			OutputVolDescLog("\n\n");
 
 			i += 8 + pPathTblRec[*uiDirPosNum].uiDirNameLen;
