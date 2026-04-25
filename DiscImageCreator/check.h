@@ -1,5 +1,5 @@
 /**
- * Copyright 2011-2025 sarami
+ * Copyright 2011-2026 sarami
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -249,5 +249,3 @@ BOOL IsSjis(
 	size_t stTxtIdx,
 	size_t stTmpTextLen
 );
-
-_TCHAR* find_last_string(const _TCHAR* s, const _TCHAR* target);

@@ -13,11 +13,112 @@ int GetCurrentDirectory(size_t size, char *buf)
 	return TRUE;
 }
 
-int GetTempPath(size_t size, char* buf)
+static size_t build_temp_path_narrow(char *buf, size_t bufSize)
 {
-	UNREFERENCED_PARAMETER(size);
-	strncpy(buf, "/tmp/", 6);
-	return TRUE;
+    const char *tmp = getenv("TMPDIR");
+    struct stat st;
+
+    if (!tmp || !*tmp ||
+        stat(tmp, &st) != 0 || !S_ISDIR(st.st_mode)) {
+        tmp = "/tmp";
+    }
+
+    size_t len = strlen(tmp);
+    int need_slash = (len > 0 && tmp[len - 1] != '/');
+
+    size_t required = len + (need_slash ? 1 : 0) + 1;
+    if (bufSize == 0) {
+        return 0;
+    }
+
+    if (required > bufSize) {
+        if (len >= bufSize) {
+            len = bufSize - 1;
+            need_slash = 0;
+        } else if (len + 1 >= bufSize) {
+            need_slash = 0;
+        }
+    }
+
+    memcpy(buf, tmp, len);
+    size_t pos = len;
+
+    if (need_slash && pos < bufSize - 1) {
+        buf[pos++] = '/';
+    }
+
+    buf[pos] = '\0';
+    return pos;
+}
+
+DWORD GetTempPathA(DWORD nBufferLength, char *lpBuffer)
+{
+    char tmpBuf[PATH_MAX];
+    size_t len = build_temp_path_narrow(tmpBuf, sizeof(tmpBuf));
+    if (len == 0) {
+        return 0;
+    }
+
+    size_t required = len + 1;
+
+    if (!lpBuffer || nBufferLength == 0) {
+        return (DWORD)required;
+    }
+
+    if (nBufferLength < required) {
+        size_t copy_len = nBufferLength - 1;
+        memcpy(lpBuffer, tmpBuf, copy_len);
+        lpBuffer[copy_len] = '\0';
+        return (DWORD)required;
+    }
+
+    memcpy(lpBuffer, tmpBuf, len + 1);
+    return (DWORD)len;
+}
+
+DWORD GetTempPathW(DWORD nBufferLength, wchar_t *lpBuffer)
+{
+    char tmpBuf[PATH_MAX];
+    size_t lenNarrow = build_temp_path_narrow(tmpBuf, sizeof(tmpBuf));
+    if (lenNarrow == 0) {
+        return 0;
+    }
+
+    size_t requiredCharsNoNull = mbstowcs(NULL, tmpBuf, 0);
+    if (requiredCharsNoNull == (size_t)-1) {
+        return 0;
+    }
+    size_t required = requiredCharsNoNull + 1;
+
+    if (!lpBuffer || nBufferLength == 0) {
+        return (DWORD)required;
+    }
+
+    if (nBufferLength < required) {
+        size_t toConvert = nBufferLength - 1;
+        size_t written = mbstowcs(lpBuffer, tmpBuf, toConvert);
+        if (written == (size_t)-1) {
+            return 0;
+        }
+        lpBuffer[written] = L'\0';
+        return (DWORD)required;
+    }
+
+    size_t written = mbstowcs(lpBuffer, tmpBuf, required);
+    if (written == (size_t)-1) {
+        return 0;
+    }
+    lpBuffer[written] = L'\0';
+    return (DWORD)written;
+}
+
+DWORD GetTempPath(DWORD nBufferLength, LPTSTR lpBuffer)
+{
+#ifdef _UNICODE
+    return GetTempPathW(nBufferLength, lpBuffer);
+#else
+    return GetTempPathA(nBufferLength, lpBuffer);
+#endif
 }
 
 // https://groups.google.com/forum/#!topic/gnu.gcc.help/0dKxhmV4voE
@@ -33,7 +134,7 @@ int GetTempPath(size_t size, char* buf)
 
 void _splitpath(const char* Path, char* Drive, char* Directory, char* Filename, char* Extension)
 {
-	char* CopyOfPath = (char*)Path;
+	const char* CopyOfPath = Path;
 	int Counter = 0;
 	int Last = 0;
 	int Rest = 0;
@@ -161,9 +262,9 @@ void _makepath(char* Path, const char* Drive, const char* Directory,
 
 int PathSet(char* path, char const* fullpath)
 {
-       strcpy(path, fullpath);
+	strcpy(path, fullpath);
 
-       return 1; /* not sure when this function would 'fail' */
+	return 1; /* not sure when this function would 'fail' */
 }
 
 // http://stackoverflow.com/questions/3218201/find-a-replacement-for-windows-pathappend-on-gnu-linux
@@ -194,41 +295,139 @@ int PathAppend(char* path, char const* more)
 int PathFileExists(const char *filename)
 {
 	FILE *fp = fopen(filename, "r");
-	if (fp != NULL) fclose(fp);
+	if (fp != NULL) {
+		fclose(fp);
+	}
 	return (fp != NULL);
 }
 
-// http://stackoverflow.com/questions/2336242/recursive-mkdir-system-call-on-unix
+int parse_uid_gid_from_sudo(uid_t *out_uid, gid_t *out_gid)
+{
+	const char *su = getenv("SUDO_UID");
+	const char *sg = getenv("SUDO_GID");
+	if (!su || !sg) {
+		return 0;
+	}
+
+    char *end = NULL;
+    unsigned long u = strtoul(su, &end, 10);
+	if (!end || *end != '\0') {
+		return 0;
+	}
+
+    end = NULL;
+    unsigned long g = strtoul(sg, &end, 10);
+	if (!end || *end != '\0') {
+		return 0;
+	}
+
+    *out_uid = (uid_t)u;
+    *out_gid = (gid_t)g;
+    return 1;
+}
+
 int MakeSureDirectoryPathExists(const char *dir)
 {
-	char tmp[256];
-	char *p = NULL;
+	char tmp[PATH_MAX];
+	char* p = NULL;
 	size_t len;
 
+	if (!dir) {
+		errno = EINVAL;
+		return 0;
+	}
+	if (strlen(dir) >= sizeof(tmp)) {
+		errno = ENAMETOOLONG;
+		return 0;
+	}
 	snprintf(tmp, sizeof(tmp), "%s", dir);
 	len = strlen(tmp);
-	if (tmp[len - 1] == '/')
-		tmp[len - 1] = 0;
-	for (p = tmp + 1; *p; p++)
+	if (len == 0) {
+		errno = EINVAL;
+		return 0;
+	}
+	if (tmp[len - 1] == '/' && len > 1) {
+		tmp[len - 1] = '\0';
+	}
+	uid_t target_uid = (uid_t)-1;
+	gid_t target_gid = (gid_t)-1;
+	int need_chown = 0;
+	if (geteuid() == 0) {
+		if (parse_uid_gid_from_sudo(&target_uid, &target_gid)) {
+			need_chown = 1;
+		}
+	}
+	for (p = tmp + 1; *p; p++) {
 		if (*p == '/') {
-			*p = 0;
-			mkdir(tmp, S_IRWXU);
+			*p = '\0';
+			if (mkdir(tmp, 0755) == 0) {
+				if (need_chown) {
+					if (chown(tmp, target_uid, target_gid) != 0) {
+						fprintf(stderr, "Failed to chown");
+					}
+				}
+			} else if (errno != EEXIST) {
+			    return 0;
+			}
 			*p = '/';
 		}
-	mkdir(tmp, S_IRWXU);
-	return true;
+	}
+	if (mkdir(tmp, 0755) == 0) {
+		if (need_chown) {
+			if (chown(tmp, target_uid, target_gid) != 0) {
+				fprintf(stderr, "Failed to chown");
+			}
+		}
+	} else if (errno != EEXIST) {
+	    return 0;
+	}
+
+	return 1;
 }
 
 int PathRemoveFileSpec(char* path)
 {
-	size_t length = strlen(path);
-	for (size_t j = length - 1; j > 0; j--) {
-		if (path[j] == '/') {
-			path[j] = '\0';
-			break;
+	if (path == NULL)
+		return 0;
+
+	size_t len = strlen(path);
+	if (len == 0)
+		return 0;
+
+	// root "/" is ignore
+	if (len == 1 && path[0] == '/')
+		return 0;
+
+	// last '/' is skip
+	size_t i = len;
+	while (i > 0 && path[i - 1] == '/')
+		--i;
+
+	if (i == 0) {
+		// if string is "////" , it changed to "/"
+		path[0] = '/';
+		path[1] = '\0';
+		return 1;
+	}
+
+	// search last '/' before i
+	for (size_t j = i; j > 0; --j) {
+		if (path[j - 1] == '/') {
+			if (j == 1) {
+				// "/foo" -> "/"
+				path[1] = '\0';
+			}
+			else {
+				// "/foo/bar.txt" -> "/foo"
+				// "dir/file"      -> "dir"
+				path[j - 1] = '\0';
+			}
+			return 1;
 		}
 	}
-	return 1;
+
+	// '/' is nothing
+	return 0;
 }
 
 int PathRemoveExtension(char* path)
@@ -249,6 +448,37 @@ int PathRenameExtension(char* path, const char* ext)
 	PathRemoveExtension(path);
 	strncat(path, ext, strlen(path));
 	return 1;
+}
+
+const char* PathFindExtensionA(const char* path)
+{
+	if (!path) {
+		return NULL;
+	}
+
+	const char* base = path;
+	for (const char* p = path; *p; ++p) {
+		if (*p == '/' || *p == '\\') {
+			base = p + 1;
+		}
+	}
+
+	const char* last_dot = NULL;
+	for (const char* p = base; *p; ++p) {
+		if (*p == '.') {
+			last_dot = p;
+		}
+	}
+
+	if (!last_dot) {
+		const char* end = base;
+		while (*end) {
+			++end;
+		}
+		return end;
+	}
+
+	return last_dot;
 }
 
 int MoveFileEx(const char* srcFile, const char* dstFile, int flag)
@@ -312,10 +542,10 @@ off_t _ftelli64(FILE* fp)
 int GetModuleFileName(void* a, char* path, unsigned long size)
 {
 	UNREFERENCED_PARAMETER(a);
-#ifdef __linux__
+#if defined(__linux__)
 	ssize_t v = readlink("/proc/self/exe", path, size);
 	if (v == -1) {
-#elif __MACH__
+#elif defined(__APPLE__) && defined(__MACH__)
 	if (_NSGetExecutablePath(path, (uint32_t*)&size) != 0) {
 #endif
 		return FALSE;
@@ -373,7 +603,7 @@ int GetLastError(void)
 	return errno;
 }
 
-#ifdef __linux__
+#if defined(__linux__)
 int CloseHandle(int fd)
 {
 	int ret = close(fd);
@@ -416,7 +646,7 @@ off64_t SetFilePointerEx(int fd, LARGE_INTEGER pos, void* a, int origin)
 	off64_t ofs = pos.QuadPart;
 	return lseek64(fd, ofs, origin);
 }
-#elif __MACH__
+#elif defined(__APPLE__) && defined(__MACH__)
 // https://developer.apple.com/library/archive/documentation/DeviceDrivers/Conceptual/WorkingWithSAM/WWS_SAMDevInt/WWS_SAM_DevInt.html#//apple_ref/doc/uid/TP30000387-SW1
 IOCFPlugInInterface** plugInInterface;
 MMCDeviceInterface** mmcInterface;
@@ -424,79 +654,82 @@ SCSITaskDeviceInterface** interface;
 
 SCSITaskInterface** GetSCSITaskInterface(char* path)
 {
-#if 0
-	io_service_t service = IORegistryEntryFromPath(kIOMasterPortDefault, path);
-#else
+	const char* bsdName = path;
+	const char* slash = strrchr(path, '/');
+	if (slash) {
+		bsdName = slash + 1;   // "/dev/disk2" -> "disk2"
+	}
 	// Create the dictionaries
-	CFMutableDictionaryRef matchingDict = CFDictionaryCreateMutable(kCFAllocatorDefault, 0, NULL, NULL);
-	CFMutableDictionaryRef subDict      = CFDictionaryCreateMutable(kCFAllocatorDefault, 0, NULL, NULL);
+	CFMutableDictionaryRef matchingDict = CFDictionaryCreateMutable(
+		kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks,	&kCFTypeDictionaryValueCallBacks);
+	CFMutableDictionaryRef subDict      = CFDictionaryCreateMutable(
+		kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks,	&kCFTypeDictionaryValueCallBacks);
 
 	// Create a dictionary with the "SCSITaskDeviceCategory" key = "SCSITaskAuthoringDevice"
-	CFDictionarySetValue(subDict, CFSTR(kIOPropertySCSITaskDeviceCategory), CFSTR(kIOPropertySCSITaskAuthoringDevice));
+	CFDictionarySetValue(subDict
+		, CFSTR(kIOPropertySCSITaskDeviceCategory), CFSTR(kIOPropertySCSITaskAuthoringDevice));
 
 	// Add the dictionary to the main dictionary with the key "IOPropertyMatch" to
 	// narrow the search to the above dictionary.
 	CFDictionarySetValue(matchingDict, CFSTR(kIOPropertyMatchKey), subDict);
 
+	CFRelease(subDict);
+
 	io_iterator_t iterator = 0;
-	IOServiceGetMatchingServices(kIOMasterPortDefault, matchingDict, &iterator);
+	kern_return_t err = IOServiceGetMatchingServices(kIOMasterPortDefault, matchingDict, &iterator);
+	if (err != KERN_SUCCESS || !iterator) {
+		fprintf(stderr, "IOServiceGetMatchingServices failed: 0x%x\n", err);
+		return NULL;
+	}
+	io_service_t service = IO_OBJECT_NULL;
+	io_service_t tmp;
+	while ((tmp = IOIteratorNext(iterator))) {
+		io_name_t service_class = "";
+		io_string_t service_path = "";
+		IORegistryEntryGetPath(tmp, kIOServicePlane, service_path);
+		IOObjectGetClass(tmp, service_class);
 
-	io_service_t service = 0;
-	if (iterator) {
-		io_service_t tmp;
-		do {
-			tmp = IOIteratorNext(iterator);
-			if (tmp) {
-				io_name_t service_class = "";
-				io_string_t service_path = "";
-				IORegistryEntryGetPath(tmp, kIOServicePlane, service_path);
-				IOObjectGetClass(tmp, service_class);
-				printf("Class: %s\nPath: %s\n", service_class, service_path);
-				service = tmp;
+		CFStringRef cat = (CFStringRef)IORegistryEntryCreateCFProperty(
+			tmp, CFSTR(kIOPropertySCSITaskDeviceCategory), kCFAllocatorDefault, 0);
+		if (cat) {
+			char buf[128];
+			if (CFStringGetCString(cat, buf, sizeof(buf), kCFStringEncodingUTF8)) {
+				if (strcmp(buf, kIOPropertySCSITaskAuthoringDevice) == 0) {
+					printf("Class: %s\nPath: %s\n", service_class, service_path);
+					service = tmp;
+					CFRelease(cat);
+					break;
+				}
 			}
-		} while (tmp);
-		IOObjectRelease(iterator);
+			CFRelease(cat);
+		}
+
+		IOObjectRelease(tmp);
 	}
+	IOObjectRelease(iterator);
 	if (!service) {
+		fprintf(stderr, "Not found SCSITaskAuthoringDevice\n");
 		return NULL;
 	}
-#endif
-	CFStringRef deviceNameFromReg;
-	if ((deviceNameFromReg = (CFStringRef)IORegistryEntrySearchCFProperty(
-		(io_registry_entry_t)service, kIOServicePlane, CFSTR(kIOBSDNameKey)
-		, kCFAllocatorDefault, kIORegistryIterateRecursively)) == NULL) {
-		fprintf(stderr, "Failed: IORegistryEntrySearchCFProperty\n");
-		return NULL;
-	}
-
-	char deviceName[_MAX_FNAME];
-	if (CFStringGetCString(deviceNameFromReg, deviceName, sizeof(deviceName), kCFStringEncodingUTF8) == FALSE) {
-		fprintf(stderr, "Failed: CFStringGetCString\n");
-		return NULL;
+	CFTypeRef prop = IORegistryEntryCreateCFProperty(service, CFSTR("IOCFPlugInTypes"), kCFAllocatorDefault, 0);
+	if (!prop) {
+	    fprintf(stderr, "Not found IOCFPlugInTypes\n");
+	} else {
+	    fprintf(stderr, "IOCFPlugInTypes:\n");
+	    CFShow(prop);
+	    CFRelease(prop);
 	}
 
-	char* unmountCmd;
-	const char* cmd = "sudo /usr/sbin/diskutil unmountDisk";
-	const char* devNull = "> /dev/null";
-	size_t cmdLen = strlen(cmd) + strlen(deviceName) + strlen(devNull) + 3;
-	if ((unmountCmd = (char*)malloc(cmdLen)) == NULL) {
-		fprintf(stderr, "Failed: malloc\n");
-		return NULL;
-	}
-	snprintf(unmountCmd, cmdLen, "%s %s %s", cmd, deviceName, devNull);
+	char unmountCmd[256];
+	snprintf(unmountCmd, sizeof(unmountCmd),
+		"diskutil unmountDisk %s > /dev/null", bsdName);
 	printf("unmountCmd: %s\n", unmountCmd);
-	CFRelease(deviceNameFromReg);
-
 	if (system(unmountCmd) != 0) {
-		free(unmountCmd);
-		fprintf(stderr, "Failed: system\n");
-		return NULL;
+		fprintf(stderr, "Failed: system(unmountDisk)\n");
 	}
-	free(unmountCmd);
 
 	SInt32        score;
 	HRESULT       herr;
-	kern_return_t err;
 
 	// Create the IOCFPlugIn interface so we can query it.
 	if (noErr != (err = IOCreatePlugInInterfaceForService(
@@ -628,4 +861,194 @@ int GetDiskFreeSpaceEx(
 	lpTotalNumberOfFreeBytes->QuadPart = buf.f_frsize * buf.f_bfree;
 
 	return 0;
+}
+
+static void split_dir_and_pattern(const char* path, char* dir, char* pat)
+{
+	const char* slash = strrchr(path, '/');
+	if (!slash) {
+		strcpy(dir, ".");
+		strcpy(pat, path);
+	}
+	else {
+		size_t dlen = (size_t)(slash - path);
+		if (dlen == 0) {
+			strcpy(dir, "/");
+		}
+		else {
+			memcpy(dir, path, dlen);
+			dir[dlen] = '\0';
+		}
+		strcpy(pat, slash + 1);
+	}
+}
+
+static void fill_find_data(const char* dirpath,
+	const char* name,
+	WIN32_FIND_DATA* fd)
+{
+	char full[PATH_MAX];
+	struct stat st;
+
+	snprintf(full, sizeof(full), "%s/%s", dirpath, name);
+	if (stat(full, &st) != 0) {
+		fd->dwFileAttributes = 0;
+		fd->nFileSize = 0;
+		strncpy(fd->cFileName, name, sizeof(fd->cFileName) - 1);
+		fd->cFileName[sizeof(fd->cFileName) - 1] = '\0';
+		return;
+	}
+
+	DWORD attr = 0;
+	if (S_ISDIR(st.st_mode)) {
+		attr |= FILE_ATTRIBUTE_DIRECTORY;
+	}
+	if ((st.st_mode & S_IWUSR) == 0) {
+		attr |= FILE_ATTRIBUTE_READONLY;
+	}
+
+	fd->dwFileAttributes = attr;
+	fd->nFileSize = (LONGLONG)st.st_size;
+	strncpy(fd->cFileName, name, sizeof(fd->cFileName) - 1);
+	fd->cFileName[sizeof(fd->cFileName) - 1] = '\0';
+}
+
+static int has_wildcard(const char* path)
+{
+	return strpbrk(path, "*?[") != NULL;
+}
+
+HANDLE FindFirstFileA(const char* lpFileName, WIN32_FIND_DATA* lpFindFileData)
+{
+	if (!has_wildcard(lpFileName)) {
+		struct stat st;
+		if (stat(lpFileName, &st) != 0) {
+			errno = ENOENT;
+			return INVALID_HANDLE_VALUE;
+		}
+
+		FIND_HANDLE_INTERNAL* h = (FIND_HANDLE_INTERNAL*)malloc(sizeof(*h));
+		if (!h) {
+			errno = ENOMEM;
+			return INVALID_HANDLE_VALUE;
+		}
+
+		memset(h, 0, sizeof(*h));
+		h->dir = NULL;
+		h->single_done = 0;
+
+		split_dir_and_pattern(lpFileName, h->dirpath, h->pattern);
+
+		fill_find_data(h->dirpath, h->pattern, lpFindFileData);
+
+		return (HANDLE)h;
+	}
+
+	char dir[PATH_MAX];
+	char pat[PATH_MAX];
+	split_dir_and_pattern(lpFileName, dir, pat);
+
+	DIR* d = opendir(dir);
+	if (!d) {
+		return INVALID_HANDLE_VALUE;
+	}
+
+	FIND_HANDLE_INTERNAL* h = (FIND_HANDLE_INTERNAL*)malloc(sizeof(*h));
+	if (!h) {
+		closedir(d);
+		errno = ENOMEM;
+		return INVALID_HANDLE_VALUE;
+	}
+
+	h->dir = d;
+	strncpy(h->dirpath, dir, sizeof(h->dirpath) - 1);
+	h->dirpath[sizeof(h->dirpath) - 1] = '\0';
+	strncpy(h->pattern, pat, sizeof(h->pattern) - 1);
+	h->pattern[sizeof(h->pattern) - 1] = '\0';
+
+	struct dirent* ent;
+	while ((ent = readdir(d)) != NULL) {
+		if (fnmatch(h->pattern, ent->d_name, 0) == 0) {
+			fill_find_data(h->dirpath, ent->d_name, lpFindFileData);
+			return (HANDLE)h;
+		}
+	}
+
+	closedir(d);
+	free(h);
+	errno = ENOENT;
+	return INVALID_HANDLE_VALUE;
+}
+
+BOOL FindNextFileA(HANDLE hFindFile, WIN32_FIND_DATA* lpFindFileData)
+{
+	FIND_HANDLE_INTERNAL* h = (FIND_HANDLE_INTERNAL*)hFindFile;
+
+	if (!h->dir) {
+		if (h->single_done) {
+			errno = ENOENT;
+			return FALSE;
+		}
+		h->single_done = 1;
+		errno = ENOENT;
+		return FALSE;
+	}
+
+	struct dirent* ent;
+	while ((ent = readdir(h->dir)) != NULL) {
+		if (fnmatch(h->pattern, ent->d_name, 0) == 0) {
+			fill_find_data(h->dirpath, ent->d_name, lpFindFileData);
+			return TRUE;
+		}
+	}
+
+	errno = ENOENT;
+	return FALSE;
+}
+
+BOOL FindClose(HANDLE hFindFile)
+{
+	FIND_HANDLE_INTERNAL* h = (FIND_HANDLE_INTERNAL*)hFindFile;
+	if (!h) return FALSE;
+	if (h->dir) closedir(h->dir);
+	free(h);
+	return TRUE;
+}
+
+BOOL DeleteFileA(const char* lpFileName)
+{
+	if (unlink(lpFileName) == 0) {
+		return TRUE;
+	}
+	return FALSE;
+}
+
+BOOL RemoveDirectoryA(const char* lpPathName)
+{
+	if (rmdir(lpPathName) == 0) {
+		return TRUE;
+	}
+	return FALSE;
+}
+
+BOOL SetFileAttributesA(const char* lpFileName, DWORD dwFileAttributes)
+{
+	struct stat st;
+	if (stat(lpFileName, &st) != 0) {
+		return FALSE;
+	}
+
+	mode_t mode = st.st_mode;
+
+	if (dwFileAttributes & FILE_ATTRIBUTE_READONLY) {
+		mode &= ~(S_IWUSR | S_IWGRP | S_IWOTH);
+	}
+	else {
+		mode |= S_IWUSR;
+	}
+
+	if (chmod(lpFileName, mode) != 0) {
+		return FALSE;
+	}
+	return TRUE;
 }

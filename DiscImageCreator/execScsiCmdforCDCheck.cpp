@@ -1,5 +1,5 @@
 /**
- * Copyright 2011-2025 sarami
+ * Copyright 2011-2026 sarami
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,6 +35,7 @@
 #include "outputScsiCmdLogforCD.h"
 #include "set.h"
 #include "_external/NonStandardFunction.h"
+#include "_external/libunshield/libunshield.h"
 
 #ifndef min
 #define min(a,b)            (((a) < (b)) ? (a) : (b))
@@ -993,7 +994,8 @@ BOOL ReadCDForCheckingSubQ1stIndex(
 				else {
 					BOOL bBreak = FALSE;
 					for (INT i = 0; i < CD_RAW_SECTOR_SIZE; i++) {
-						if (IsValidMainDataHeader(aMainBuf + i)) {
+						if (IsValidMainDataHeader(aMainBuf + i) &&
+							(aMainBuf[i + 12] & 0x01) && (aMainBuf[i + 13] & 0x80) && (aMainBuf[i + 15] & 0x60)) {
 							// CD-i Ready
 							pDisc->SCSI.trkType = (TRACK_TYPE)(TRACK_TYPE::pregapAudioWithSyncIn1stTrack | pDisc->SCSI.trkType);
 							bBreak = TRUE;
@@ -1092,7 +1094,8 @@ BOOL ReadCDForCheckingSubQAdr(
 	else {
 		nNumberOfSectors = pDisc->SCSI.nAllLength - nTmpLBA;
 	}
-	nNumberOfSectors = min(nNumberOfSectors, 500);
+	// Alphaville - The Breathtaking Blue (Germany) has large ranges
+	nNumberOfSectors = min(nNumberOfSectors, 1000);
 	pDiscPerSector->byTrackNum = BYTE(byIdxOfTrack + 1);
 	INT nSubOfs = CD_RAW_SECTOR_SIZE;
 	if (pExtArg->byD8 || pDevice->byPlxtrDrive) {
@@ -1347,17 +1350,18 @@ BOOL ReadCDForCheckingSubRtoW(
 				}
 				memcpy(&scRW[k], tmpCode, sizeof(scRW[k]));
 				switch (scRW[k].command) {
-				case 0: // MODE 0, ITEM 0
+				case 0: // MODE 0, ITEM 0 : ZERO mode
 					break;
-				case 8: // MODE 1, ITEM 0
-					break;
-				case 9: // MODE 1, ITEM 1
+				case 8: // MODE 1, ITEM 0 : LINE-GRAPHICS mode
 					bCDG = TRUE;
 					break;
-				case 10: // MODE 1, ITEM 2
+				case 9: // MODE 1, ITEM 1 : TV-GRAPHICS mode
+					bCDG = TRUE;
+					break;
+				case 10: // MODE 1, ITEM 2 : EXTENDED TV-GRAPHICS mode
 					bCDEG = TRUE;
 					break;
-				case 17: // MODE 2, ITEM 1,2,3,5,6,7 or MODE 4
+				case 17: // MODE 2, ITEM 1,2,3,5,6,7 or MODE 4 : CD TEXT mode
 				case 18:
 				case 19:
 				case 21:
@@ -1365,9 +1369,9 @@ BOOL ReadCDForCheckingSubRtoW(
 				case 23:
 				case 32:
 					break;
-				case 24: // MODE 3, ITEM 0
+				case 24: // MODE 3, ITEM 0 : MIDI mode
 					break;
-				case 56: // MODE 7, ITEM 0
+				case 56: // MODE 7, ITEM 0 : USER mode
 					break;
 				default:
 					break;
@@ -1559,36 +1563,163 @@ LONG GetOfsOfSecuromDllSig(
 	return MAKELONG(MAKEWORD(lpBuf[i + 82], lpBuf[i + 83]), MAKEWORD(lpBuf[i + 84], lpBuf[i + 85]));
 }
 
-#ifdef _WIN32
-LRESULT WINAPI CabinetCallback(
-	IN PVOID pMyInstallData,
-	IN UINT Notification,
-	IN UINT Param1,
-	IN UINT Param2
-) {
-	UNREFERENCED_PARAMETER(Param2);
-	LRESULT lRetVal = NO_ERROR;
-	TCHAR szTarget[_MAX_PATH];
-	FILE_IN_CABINET_INFO *pInfo = NULL;
-	FILEPATHS *pFilePaths = NULL;
+#ifndef _WIN32
+static int extract_current_entry_to_file(struct archive* a, const char* out_path)
+{
+	FILE* f = fopen(out_path, "wb");
+	if (!f) return -1;
 
+	char buf[8192];
+	ssize_t r;
+	while ((r = archive_read_data(a, buf, sizeof(buf))) > 0) {
+		if (fwrite(buf, 1, (size_t)r, f) != (size_t)r) {
+			fclose(f);
+			return -1;
+		}
+	}
+	fclose(f);
+	return (r < 0) ? -1 : 0;
+}
+
+int MySetupIterateCabinetA(
+	const char* cabinetFile,
+	MY_PSP_FILE_CALLBACK callback,
+	void* context
+) {
+	struct archive* a = NULL;
+	struct archive_entry* entry = NULL;
+	int r = ARCHIVE_OK;
+	int ret = -1;
+
+	a = archive_read_new();
+	if (!a) return -1;
+
+	archive_read_support_format_cab(a);
+	archive_read_support_filter_all(a);
+
+	if (archive_read_open_filename(a, cabinetFile, 10240) != ARCHIVE_OK) {
+		goto cleanup;
+	}
+
+	while ((r = archive_read_next_header(a, &entry)) == ARCHIVE_OK) {
+		const char* name = archive_entry_pathname(entry);
+		la_int64_t size = archive_entry_size(entry);
+		mode_t mode = archive_entry_mode(entry);
+
+		if (S_ISDIR(mode)) {
+			continue;
+		}
+
+		FILE_IN_CABINET_INFO info;
+		memset(&info, 0, sizeof(info));
+		info.NameInCabinet = name;
+		info.FileSize = (size > 0) ? (DWORD)size : 0;
+		info.Win32Error = 0;
+		info.DosDate = 0;
+		info.DosTime = 0;
+		info.DosAttribs = 0;
+
+		strncpy(info.FullTargetName, name, _MAX_PATH - 1);
+		info.FullTargetName[_MAX_PATH - 1] = '\0';
+
+		unsigned int cb_ret = callback(
+			context,
+			SPFILENOTIFY_FILEINCABINET,
+			(uintptr_t)&info,
+			(uintptr_t)cabinetFile
+		);
+
+		if (cb_ret == FILEOP_SKIP) {
+			continue;
+		}
+		else if (cb_ret == FILEOP_ABORT) {
+			ret = -1;
+			goto cleanup;
+		}
+		else if (cb_ret != FILEOP_DOIT) {
+			continue;
+		}
+
+		if (extract_current_entry_to_file(a, info.FullTargetName) != 0) {
+			FILEPATHS paths;
+			paths.Source = cabinetFile;
+			paths.Target = info.FullTargetName;
+			paths.Win32Error = 1;
+			paths.Flags = 0;
+
+			callback(context,
+				SPFILENOTIFY_FILEEXTRACTED,
+				(uintptr_t)&paths,
+				0);
+			ret = -1;
+			goto cleanup;
+		}
+		else {
+			FILEPATHS paths;
+			paths.Source = cabinetFile;
+			paths.Target = info.FullTargetName;
+			paths.Win32Error = 0;
+			paths.Flags = 0;
+
+			callback(context,
+				SPFILENOTIFY_FILEEXTRACTED,
+				(uintptr_t)&paths,
+				0);
+		}
+	}
+
+	if (r == ARCHIVE_EOF) {
+		ret = 0;
+	}
+
+cleanup:
+	if (a) {
+		archive_read_close(a);
+		archive_read_free(a);
+	}
+	return ret;
+}
+#endif
+#if defined(_WIN32)
+extern "C" UINT CALLBACK CabinetCallback(
+#else
+UINT CabinetCallback(
+#endif
+	PVOID pMyInstallData,
+	UINT  Notification,
+	UINT_PTR Param1,
+	UINT_PTR Param2
+) noexcept {
+	UNREFERENCED_PARAMETER(Param2);
+	UINT lRetVal = NO_ERROR;
+	_TCHAR szTarget[_MAX_PATH];
+	FILE_IN_CABINET_INFO *pInfo = NULL;
+#if defined(_DEBUG) || !defined(NDEBUG)
+	FILEPATHS *pFilePaths = NULL;
+#endif
 	memcpy(szTarget, pMyInstallData, _MAX_PATH);
 	switch (Notification) {
 	case SPFILENOTIFY_CABINETINFO:
 		break;
 	case SPFILENOTIFY_FILEINCABINET:
 		pInfo = (FILE_IN_CABINET_INFO *)Param1;
-		lstrcat(szTarget, pInfo->NameInCabinet);
-		lstrcpy(pInfo->FullTargetName, szTarget);
+		_tcscat(szTarget, pInfo->NameInCabinet);
+		_tcscpy(pInfo->FullTargetName, szTarget);
+#if defined(_DEBUG) || !defined(NDEBUG)
+//		printf("FILEINCABINET source: %s, target: %s\n", pInfo->FullTargetName, pInfo->NameInCabinet);
+#endif
 		lRetVal = FILEOP_DOIT;  // Extract the file.
 		break;
 	case SPFILENOTIFY_NEEDNEWCABINET: // Unexpected.
 		break;
 	case SPFILENOTIFY_FILEEXTRACTED:
+#if defined(_DEBUG) || !defined(NDEBUG)
 		pFilePaths = (FILEPATHS *)Param1;
-//		printf("Extracting %s\n", pFilePaths->Target);
+		printf("FILEEXTRACTED source: %s, target: %s\n", pFilePaths->Source, pFilePaths->Target);
+#endif
 		break;
 	case SPFILENOTIFY_FILEOPDELAYED:
+	default:
 		break;
 	}
 	return lRetVal;
@@ -1613,7 +1744,7 @@ BOOL ReadExeFromFile(
 		FcloseAndNull(fp);
 		return FALSE;
 	}
-	fread(lpBuf, sizeof(BYTE), bufsize, fp);
+	size_t readsize = fread(lpBuf, sizeof(BYTE), bufsize, fp);
 
 	if (IsImageSig(lpBuf, IMAGE_DOS_SIGNATURE)) {
 		PIMAGE_DOS_HEADER pIDh = (PIMAGE_DOS_HEADER)&lpBuf[0];
@@ -1668,7 +1799,7 @@ BOOL ReadExeFromFile(
 						lpBuf = lpBuf2;
 					}
 					fseek(fp, (LONG)dwExportPointerToRawData, SEEK_SET);
-					fread(lpBuf, sizeof(BYTE), bufsize, fp);
+					readsize = fread(lpBuf, sizeof(BYTE), bufsize, fp);
 					OutputMainInfoLog("dwExportVirtualAddress: 0x%lx, dwExportSize: 0x%lx\n", dwExportVirtualAddress, dwExportSize);
 					OutputMainChannel(fileMainInfo, lpBuf, NULL, 0, bufsize + bufsize % 16);
 					OutputExportDirectory(lpBuf, bufsize, dwExportVirtualAddress, 0);
@@ -1687,7 +1818,7 @@ BOOL ReadExeFromFile(
 						lpBuf = lpBuf2;
 					}
 					fseek(fp, (LONG)dwImportPointerToRawData, SEEK_SET);
-					fread(lpBuf, sizeof(BYTE), bufsize, fp);
+					readsize = fread(lpBuf, sizeof(BYTE), bufsize, fp);
 					OutputMainInfoLog("dwImportVirtualAddress: 0x%lx, dwImportSize: 0x%lx\n", dwImportVirtualAddress, dwImportSize);
 					OutputMainChannel(fileMainInfo, lpBuf, NULL, 0, bufsize + bufsize % 16);
 					OutputImportDirectory(lpBuf, bufsize, dwImportVirtualAddress, 0);
@@ -1706,7 +1837,7 @@ BOOL ReadExeFromFile(
 						lpBuf = lpBuf2;
 					}
 					fseek(fp, (LONG)dwResourcePointerToRawData, SEEK_SET);
-					fread(lpBuf, sizeof(BYTE), bufsize, fp);
+					readsize = fread(lpBuf, sizeof(BYTE), bufsize, fp);
 					OutputMainInfoLog("dwResourceVirtualAddress: 0x%lx, dwResourceSize: 0x%lx\n", dwResourceVirtualAddress, dwResourceSize);
 					OutputMainChannel(fileMainInfo, lpBuf, NULL, 0, bufsize + bufsize % 16);
 					_TCHAR szTab[256] = {};
@@ -1722,10 +1853,10 @@ BOOL ReadExeFromFile(
 					UINT uiSecuromReadSize = DISC_MAIN_DATA_SIZE * 2;
 					fseek(fp, -4, SEEK_END);
 					UINT uiOfsOfSecuRomDll = 0;
-					fread(&uiOfsOfSecuRomDll, sizeof(UINT), 1, fp);
+					readsize = fread(&uiOfsOfSecuRomDll, sizeof(UINT), 1, fp);
 					if (uiOfsOfSecuRomDll) {
 						fseek(fp, (LONG)uiOfsOfSecuRomDll, SEEK_SET);
-						fread(lpBuf, sizeof(BYTE), (size_t)uiSecuromReadSize, fp);
+						readsize = fread(lpBuf, sizeof(BYTE), (size_t)uiSecuromReadSize, fp);
 						if (!strncmp((LPCH)lpBuf, "AddD", 4)) {
 							UINT uiOfsOf16 = 0;
 							UINT uiOfsOf32 = 0;
@@ -1737,19 +1868,19 @@ BOOL ReadExeFromFile(
 							OutputSecuRomDllHeader(lpBuf, &uiOfsOf16, &uiOfsOf32, &uiOfsOfNT, &uiSizeOf16, &uiSizeOf32, &uiSizeOfNT);
 
 							fseek(fp, (LONG)uiOfsOf16, SEEK_SET);
-							fread(lpBuf, sizeof(BYTE), (size_t)uiSizeOf16, fp);
+							readsize = fread(lpBuf, sizeof(BYTE), (size_t)uiSizeOf16, fp);
 							OutputMainInfoLog(OUTPUT_DHYPHEN_PLUS_STR("Sintf16.dll [F:%s]"), _T(__FUNCTION__));
 							OutputMainChannel(fileMainInfo, lpBuf, NULL, 0, uiSizeOf16);
 							OutputSint16(lpBuf, 0);
 
 							fseek(fp, (LONG)uiOfsOf32, SEEK_SET);
-							fread(lpBuf, sizeof(BYTE), (size_t)uiSizeOf32, fp);
+							readsize = fread(lpBuf, sizeof(BYTE), (size_t)uiSizeOf32, fp);
 							OutputMainInfoLog(OUTPUT_DHYPHEN_PLUS_STR("Sintf32.dll [F:%s]"), _T(__FUNCTION__));
 							OutputMainChannel(fileMainInfo, lpBuf, NULL, 0, uiSizeOf32);
 							OutputSint32(lpBuf, 0, uiSizeOf32, FALSE);
 
 							fseek(fp, (LONG)uiOfsOfNT, SEEK_SET);
-							fread(lpBuf, sizeof(BYTE), (size_t)uiSizeOfNT, fp);
+							readsize = fread(lpBuf, sizeof(BYTE), (size_t)uiSizeOfNT, fp);
 							OutputMainInfoLog(OUTPUT_DHYPHEN_PLUS_STR("SintfNT.dll [F:%s]"), _T(__FUNCTION__));
 							OutputMainChannel(fileMainInfo, lpBuf, NULL, 0, uiSizeOfNT);
 							OutputSintNT(lpBuf, 0, uiSizeOfNT, FALSE);
@@ -1757,9 +1888,18 @@ BOOL ReadExeFromFile(
 					}
 					else if (pExtArg->byIntentionalSub) {
 						rewind(fp);
-						fread(lpBuf, sizeof(BYTE), (size_t)uiSecuromReadSize, fp);
 						BOOL bFound = FALSE;
-						while (!feof(fp) && !ferror(fp)) {
+						do {
+							readsize = fread(lpBuf, sizeof(BYTE), (size_t)uiSecuromReadSize, fp);
+							if (readsize < (size_t)uiSecuromReadSize) {
+								if (feof(fp)) {
+									break;
+								}
+								else if (ferror(fp)) {
+									OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+									break;
+								}
+							}
 							for (UINT i = 0; i < uiSecuromReadSize - 8; i++) {
 								if (IsSecuromDllSig(lpBuf, i)) {
 									LONG lSigPos = (LONG)(ftell(fp) - uiSecuromReadSize + i);
@@ -1775,10 +1915,7 @@ BOOL ReadExeFromFile(
 							if (bFound) {
 								break;
 							}
-							else {
-								fread(lpBuf, sizeof(BYTE), (size_t)uiSecuromReadSize, fp);
-							}
-						}
+						} while (1);
 					}
 				}
 			}
@@ -1823,7 +1960,7 @@ BOOL ProcessDirectory(
 			if (_tcscmp(fd.cFileName, _T(".")) &&
 				_tcscmp(fd.cFileName, _T(".."))) {
 				_TCHAR szFoundFilePathName[_MAX_PATH];
-				_tcsncpy(szFoundFilePathName, szExtractdir, SIZE_OF_ARRAY(szFoundFilePathName));
+				_tcsncpy(szFoundFilePathName, szExtractdir, SIZE_OF_ARRAY(szFoundFilePathName) - 1);
 				_tcsncat(szFoundFilePathName, fd.cFileName, SIZE_OF_ARRAY(szFoundFilePathName) - _tcslen(szFoundFilePathName));
 
 				if (!(FILE_ATTRIBUTE_DIRECTORY & fd.dwFileAttributes)) {
@@ -1872,32 +2009,101 @@ BOOL ProcessDirectory(
 	}
 	return TRUE;
 }
+
+#if defined(__linux__)
+#include <mntent.h>
+#elif defined(__APPLE__) && defined(__MACH__)
+#include <sys/param.h>
+#include <sys/mount.h>
 #endif
-VOID GetFullPathWithDrive(
+BOOL GetFullPathWithDrive(
 	PDEVICE pDevice,
 	PDISC pDisc,
 	INT nIdx,
-	_TCHAR* FullPathWithDrive,
+	PCHAR FullPathWithDrive,
 	size_t FullPathWithDriveLen
 ) {
-	CHAR FullPathTmp[_MAX_PATH] = {};
-	CHAR drive[_MAX_DRIVE] = {};
 	CHAR dir[_MAX_DIR] = {};
 	CHAR filename[_MAX_FNAME] = {};
 	CHAR ext[_MAX_EXT] = {};
-#ifdef _WIN32
+
+#if defined(_WIN32)
+	CHAR FullPathTmp[_MAX_PATH] = {};
+	CHAR drive[_MAX_DRIVE] = {};
 	_snprintf(drive, sizeof(drive), "%c:", pDevice->byDriveLetter);
-#else
-	_snprintf(drive, sizeof(drive), "%s", pDevice->drivepath);
-#endif
 	_splitpath(pDisc->PROTECT.pFullNameForExe[nIdx], NULL, dir, filename, ext);
 	_makepath(FullPathTmp, drive, dir, filename, ext);
 
-#ifdef UNICODE
-	MultiByteToWideChar(CP_ACP, 0,
-		FullPathTmp, sizeof(FullPathTmp), FullPathWithDrive, (INT)FullPathWithDriveLen);
-#else
 	strncpy(FullPathWithDrive, FullPathTmp, FullPathWithDriveLen);
+
+	return TRUE;
+#elif defined(__linux__)
+	char dev_real[PATH_MAX];
+
+	if (!realpath(pDevice->drivepath, dev_real)) {
+		perror("realpath(device)");
+		return FALSE;
+	}
+
+	FILE* fp = setmntent("/proc/self/mounts", "r");
+	if (!fp) {
+		fp = setmntent("/etc/mtab", "r");
+		if (!fp) {
+			perror("setmntent");
+			return FALSE;
+		}
+	}
+
+	struct mntent* ent;
+	while ((ent = getmntent(fp)) != NULL) {
+		char fs_real[PATH_MAX];
+
+		if (!realpath(ent->mnt_fsname, fs_real)) {
+			continue;
+		}
+
+		if (strcmp(fs_real, dev_real) == 0) {
+			_splitpath(pDisc->PROTECT.pFullNameForExe[nIdx], NULL, dir, filename, ext);
+			_makepath(FullPathWithDrive, ent->mnt_dir, dir, filename, ext);
+			FullPathWithDrive[FullPathWithDriveLen - 1] = '\0';
+			endmntent(fp);
+			return TRUE;
+		}
+	}
+
+	endmntent(fp);
+	return FALSE;
+#elif defined(__APPLE__) && defined(__MACH__)
+	char dev_real[PATH_MAX];
+
+	if (!realpath(pDevice->drivepath, dev_real)) {
+		perror("realpath(device)");
+		return FALSE;
+	}
+
+	struct statfs* mnts;
+	int n = getmntinfo(&mnts, MNT_NOWAIT);
+	if (n <= 0) {
+		perror("getmntinfo");
+		return FALSE;
+	}
+
+	for (int i = 0; i < n; ++i) {
+		char fs_real[PATH_MAX];
+
+		if (!realpath(mnts[i].f_mntfromname, fs_real)) {
+			continue;
+		}
+
+		if (strcmp(fs_real, dev_real) == 0) {
+			_splitpath(pDisc->PROTECT.pFullNameForExe[nIdx], NULL, dir, filename, ext);
+			_makepath(FullPathWithDrive, mnts[i].f_mntonname, dir, filename, ext);
+			FullPathWithDrive[FullPathWithDriveLen - 1] = '\0';
+			return FALSE;
+		}
+	}
+
+	return TRUE;
 #endif
 }
 
@@ -1915,9 +2121,8 @@ BOOL ReadCDForCheckingExe(
 	BYTE byRoopLen = byTransferLen;
 	SetCommandForTransferLength(pExecType, pDevice, pCdb, dwSize, &byTransferLen, &byRoopLen);
 
-#ifdef _WIN32
 	BOOL bIscCab = FALSE;
-#endif
+
 	for (INT n = 0; pDisc->PROTECT.pExtentPosForExe[n] != 0; n++) {
 		if (pDisc->SCSI.nAllLength <= pDisc->PROTECT.pExtentPosForExe[n]) {
 			OutputMainErrorLog(
@@ -1929,13 +2134,13 @@ BOOL ReadCDForCheckingExe(
 			continue;
 		}
 		BOOL bCab = FALSE;
-		_TCHAR FullPathWithDrive[_MAX_PATH] = {};
+		CHAR FullPathWithDrive[_MAX_PATH] = {};
 		GetFullPathWithDrive(pDevice, pDisc, n, FullPathWithDrive, sizeof(FullPathWithDrive));
-#ifdef _WIN32
-		if (strcasestrW(FullPathWithDrive, _T("directx"))) {
+
+		if (strcasestr(FullPathWithDrive, "directx")) {
 			continue;
 		}
-#endif
+
 		if (strcasestr(pDisc->PROTECT.pNameForExe[n], ".CAB") ||
 			strcasestr(pDisc->PROTECT.pNameForExe[n], ".HDR")) {
 
@@ -1951,29 +2156,42 @@ BOOL ReadCDForCheckingExe(
 					, pDisc->PROTECT.pFullNameForExe[n]
 				);
 				if (pExtArg->byMicroSoftCabFile) {
-#ifdef _WIN32
 					OutputString(
 						"Please wait until all files are extracted. This is needed to search protection\n"
 					);
+#ifdef _WIN32
 					_tcscat(szTmpPath, _T("!extracted\\"));
-					ProcessDirectory(pExtArg, pDisc, szTmpPath, FILE_CREATE);
-					if (!SetupIterateCabinet(FullPathWithDrive, 0, (PSP_FILE_CALLBACK)(PVOID)CabinetCallback, szTmpPath)) {
-						// 
-					}
-					// Search exe, dll from extracted file
-					ProcessDirectory(pExtArg, pDisc, szTmpPath, FILE_SEARCH);
-					ProcessDirectory(pExtArg, pDisc, szTmpPath, FILE_DELETE);
-					bCab = TRUE;
 #else
-					// TODO: linux can use cabextract
+					_tcscat(szTmpPath, _T("!extracted/"));
 #endif
+					if (ProcessDirectory(pExtArg, pDisc, szTmpPath, FILE_CREATE) == FALSE && GetLastError() != 2) {
+						OutputErrorString("Failed to FILE_CREATE, file: %s\n", FullPathWithDrive);
+						continue;
+					}
+#ifdef _WIN32
+					SetupIterateCabinetA(FullPathWithDrive, 0, (PSP_FILE_CALLBACK)(PVOID)CabinetCallback, szTmpPath);
+#else
+					if (MySetupIterateCabinetA(FullPathWithDrive, (MY_PSP_FILE_CALLBACK)CabinetCallback, szTmpPath) == -1) {
+						OutputErrorString("Failed to MySetupIterateCabinetA, file: %s\n", FullPathWithDrive);
+						continue;
+					}
+#endif
+					// Search exe, dll from extracted file
+					if (ProcessDirectory(pExtArg, pDisc, szTmpPath, FILE_SEARCH) == FALSE) {
+						OutputErrorString("Failed to FILE_SEARCH, file: %s\n", FullPathWithDrive);
+						continue;
+					}
+					if (ProcessDirectory(pExtArg, pDisc, szTmpPath, FILE_DELETE) == FALSE) {
+						OutputErrorString("Failed to FILE_DELETE, file: %s\n", FullPathWithDrive);
+						continue;
+					}
+					bCab = TRUE;
 				}
 				else {
 					OutputString("/mscf is needed to extract it\n");
 				}
 			}
 			else if (!strncmp((LPCCH)&lpBuf[0], "ISc(", 4)) {
-#ifdef _WIN32
 				OutputString(
 					"\nDetected InstallShield Cabinet File: %" CHARWIDTH "s\n"
 					, pDisc->PROTECT.pFullNameForExe[n]
@@ -1986,6 +2204,50 @@ BOOL ReadCDForCheckingExe(
 				else {
 					continue;
 				}
+#if 1
+#ifdef _WIN32
+				_tcscat(szTmpPath, _T("!extracted\\"));
+#else
+				_tcscat(szTmpPath, _T("!extracted/"));
+#endif
+				if (ProcessDirectory(pExtArg, pDisc, szTmpPath, FILE_CREATE) == FALSE && GetLastError() != 2) {
+					OutputErrorString("Failed to FILE_CREATE, file: %s\n", FullPathWithDrive);
+					continue;
+				}
+				Unshield* u = unshield_open(FullPathWithDrive);
+				if (!u) {
+					OutputErrorString("failed to open %s\n", FullPathWithDrive);
+					continue;
+				}
+				int files = unshield_file_count(u);
+				for (int i = 0; i < files; i++) {
+					const char* name = unshield_file_name(u, i);
+					const char* p = PathFindExtensionA(name);
+					if (!p || *p != '.' || p[1] == '\0') {
+						continue;
+					}
+					if (!_stricmp(p, ".exe") || !_stricmp(p, ".dll")) {
+						char out_path[_MAX_PATH];
+						snprintf(out_path, sizeof(out_path), "%s%s", szTmpPath, name);
+
+						if (!unshield_file_save(u, i, out_path)) {
+							OutputErrorString("failed to extract %s\n", name);
+						}
+					}
+				}
+				// Search exe, dll from extracted file
+				if (ProcessDirectory(pExtArg, pDisc, szTmpPath, FILE_SEARCH) == FALSE) {
+					OutputErrorString("Failed to FILE_SEARCH, file: %s\n", FullPathWithDrive);
+					continue;
+				}
+				if (ProcessDirectory(pExtArg, pDisc, szTmpPath, FILE_DELETE) == FALSE) {
+					OutputErrorString("Failed to FILE_DELETE, file: %s\n", FullPathWithDrive);
+					continue;
+				}
+				bIscCab = TRUE;
+				bCab = TRUE;
+#else
+#ifdef _WIN32
 				_TCHAR szPathIsc[_MAX_PATH] = {};
 				bRet = GetCmd(szPathIsc, _T("i6comp"), _T("exe"));
 
@@ -2021,122 +2283,130 @@ BOOL ReadCDForCheckingExe(
 						_TCHAR buf[512] = {};
 						CONST INT nMaxTrimSize = 16;
 						INT nTrimSize = 0;
-						_fgetts(buf, sizeof(buf), fp);
-
-						while (!feof(fp) && !ferror(fp)) {
-							LPTCH pTrimBuf[nMaxTrimSize] = {};
-							pTrimBuf[0] = _tcstok(buf, _T(" ")); // space
-
-							for (INT nRoop = 1; nRoop < nMaxTrimSize; nRoop++) {
-								pTrimBuf[nRoop] = _tcstok(NULL, _T(" ")); // space
-
-								if (pTrimBuf[nRoop] == NULL) {
+						do {
+							if (_fgetts(buf, sizeof(buf), fp) == NULL) {
+								if (feof(fp)) {
 									break;
 								}
-								nTrimSize++;
-							}
-							// File size is over 0
-							if (_tcscmp(pTrimBuf[4], _T("0"))) {
-								OutputVolDescLog("Extracted from %" CHARWIDTH "s\n", pDisc->PROTECT.pFullNameForExe[n]);
-								// extract .exe or .dll from .cab
-								_sntprintf(str, nStrSize,
-									_T("\"\"%s\" e -o \"%s\" %s\" 2> NUL"), szPathIsc, FullPathWithDrive, pTrimBuf[5]);
-								_tsystem(str);
-
-								if (!GetCurrentDirectory(SIZE_OF_ARRAY(szTmpFullPath), szTmpFullPath)) {
+								else if (ferror(fp)) {
 									OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
-									return FALSE;
+									break;
 								}
-//#define DEBUGTEST4
+							}
+							else {
+								LPTCH pTrimBuf[nMaxTrimSize] = {};
+								pTrimBuf[0] = _tcstok(buf, _T(" ")); // space
+
+								for (INT nRoop = 1; nRoop < nMaxTrimSize; nRoop++) {
+									pTrimBuf[nRoop] = _tcstok(NULL, _T(" ")); // space
+
+									if (pTrimBuf[nRoop] == NULL) {
+										break;
+									}
+									nTrimSize++;
+								}
+								// File size is over 0
+								if (_tcscmp(pTrimBuf[4], _T("0"))) {
+									OutputVolDescLog("Extracted from %" CHARWIDTH "s\n", pDisc->PROTECT.pFullNameForExe[n]);
+									// extract .exe or .dll from .cab
+									_sntprintf(str, nStrSize,
+										_T("\"\"%s\" e -o \"%s\" %s\" 2> NUL"), szPathIsc, FullPathWithDrive, pTrimBuf[5]);
+									_tsystem(str);
+
+									if (!GetCurrentDirectory(SIZE_OF_ARRAY(szTmpFullPath), szTmpFullPath)) {
+										OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+										return FALSE;
+									}
+									//#define DEBUGTEST4
 #ifdef DEBUGTEST1
-								memcpy(pTrimBuf[6], "TCP", sizeof("TCP"));
-								if (pTrimBuf[7] == NULL) {
-									pTrimBuf[7] =(LPTCH) malloc(32);
-									memcpy(pTrimBuf[7], "Protocol.dll\n", sizeof("Protocol.dll\n"));
-								}
-								nTrimSize = 7;
+									memcpy(pTrimBuf[6], "TCP", sizeof("TCP"));
+									if (pTrimBuf[7] == NULL) {
+										pTrimBuf[7] = (LPTCH)malloc(32);
+										memcpy(pTrimBuf[7], "Protocol.dll\n", sizeof("Protocol.dll\n"));
+									}
+									nTrimSize = 7;
 #endif
 #ifdef DEBUGTEST2
-								memcpy(pTrimBuf[6], "TCP", sizeof("TCP"));
-								if (pTrimBuf[7] == NULL) {
-									pTrimBuf[7] = (LPTCH)malloc(32);
-									memcpy(pTrimBuf[7], "version\\Protocol.dll\n", sizeof("version\\Protocol.dll\n"));
-								}
-								nTrimSize = 7;
+									memcpy(pTrimBuf[6], "TCP", sizeof("TCP"));
+									if (pTrimBuf[7] == NULL) {
+										pTrimBuf[7] = (LPTCH)malloc(32);
+										memcpy(pTrimBuf[7], "version\\Protocol.dll\n", sizeof("version\\Protocol.dll\n"));
+									}
+									nTrimSize = 7;
 #endif
 #ifdef DEBUGTEST3
-								memcpy(pTrimBuf[6], "TCP", sizeof("TCP"));
-								if (pTrimBuf[7] == NULL) {
-									pTrimBuf[7] = (LPTCH)malloc(32);
-									memcpy(pTrimBuf[7], "version\\TCP", sizeof("version\\TCP"));
-								}
-								if (pTrimBuf[8] == NULL) {
-									pTrimBuf[8] = (LPTCH)malloc(32);
-									memcpy(pTrimBuf[8], "Protocol.dll\n", sizeof("Protocol.dll\n"));
-								}
-								nTrimSize = 8;
+									memcpy(pTrimBuf[6], "TCP", sizeof("TCP"));
+									if (pTrimBuf[7] == NULL) {
+										pTrimBuf[7] = (LPTCH)malloc(32);
+										memcpy(pTrimBuf[7], "version\\TCP", sizeof("version\\TCP"));
+									}
+									if (pTrimBuf[8] == NULL) {
+										pTrimBuf[8] = (LPTCH)malloc(32);
+										memcpy(pTrimBuf[8], "Protocol.dll\n", sizeof("Protocol.dll\n"));
+									}
+									nTrimSize = 8;
 #endif
 #ifdef DEBUGTEST4
-								memcpy(pTrimBuf[6], "utils\\clcompile.exe\n", sizeof("utils\\clcompile.exe\n"));
+									memcpy(pTrimBuf[6], "utils\\clcompile.exe\n", sizeof("utils\\clcompile.exe\n"));
 #endif
 #ifdef DEBUGTEST5
-								memcpy(pTrimBuf[6], "Data\\RTLibs\\1st", sizeof("Data\\RTLibs\\1st"));
-								if (pTrimBuf[7] == NULL) {
-									pTrimBuf[7] = (LPTCH)malloc(32);
-									memcpy(pTrimBuf[7], "trailer.dll\n", sizeof("trailer.dll\n"));
-								}
-								nTrimSize = 7;
-#endif
-								_TCHAR fpath[_MAX_PATH] = {};
-								_TCHAR fname[_MAX_FNAME] = {};
-								size_t len = 0;
-
-								for (INT idx = 6; idx <= nTrimSize; idx++) {
-									//           0      1         2     3          4   5   6
-									// ----------------------------------------------------------------------------
-									// 08-16-2002 18:06      36957 A___      12034   41 TCP Protocol.dll
-									// 08-16-2002 18:06      36957 A___      12034   41 TCP version\TCP Protocol.dll
-									// 03-27-2003 11:07     274432 A___     128354   56 utils\clcompile.exe
-									// 10-11-1999 14:01    6500356 A___    5305562  253 Data\RTLibs\1st trailer.dll
-									// 05-01-2003 11:46   11870212 A___   11492648  256 Data\RTLibs\L 01 in.dll
-									_tcscat(fpath, pTrimBuf[idx]);
-									len += _tcslen(pTrimBuf[idx]);
-									if (idx < nTrimSize) {
-										_tcscat(fpath, _T(" "));
-										len++;
+									memcpy(pTrimBuf[6], "Data\\RTLibs\\1st", sizeof("Data\\RTLibs\\1st"));
+									if (pTrimBuf[7] == NULL) {
+										pTrimBuf[7] = (LPTCH)malloc(32);
+										memcpy(pTrimBuf[7], "trailer.dll\n", sizeof("trailer.dll\n"));
 									}
-								}
-								_TCHAR* p = _tcsrchr(fpath, '\\');
-								if (p) {
-									// exclude path
-									len = _tcslen(p + sizeof(_TCHAR));
-									_tcsncpy(fname, p + sizeof(_TCHAR), len);
-								}
-								else {
-									_tcsncpy(fname, fpath, _MAX_FNAME);
-								}
+									nTrimSize = 7;
+#endif
+									_TCHAR fpath[_MAX_PATH] = {};
+									_TCHAR fname[_MAX_FNAME] = {};
+									size_t len = 0;
 
-								// Delete '\n'
-								fname[len - sizeof(_TCHAR)] = '\0';
-								_tcscat(szTmpFullPath, _T("\\"));
-								_tcscat(szTmpFullPath, fname);
+									for (INT idx = 6; idx <= nTrimSize; idx++) {
+										//           0      1         2     3          4   5   6
+										// ----------------------------------------------------------------------------
+										// 08-16-2002 18:06      36957 A___      12034   41 TCP Protocol.dll
+										// 08-16-2002 18:06      36957 A___      12034   41 TCP version\TCP Protocol.dll
+										// 03-27-2003 11:07     274432 A___     128354   56 utils\clcompile.exe
+										// 10-11-1999 14:01    6500356 A___    5305562  253 Data\RTLibs\1st trailer.dll
+										// 05-01-2003 11:46   11870212 A___   11492648  256 Data\RTLibs\L 01 in.dll
+										_tcscat(fpath, pTrimBuf[idx]);
+										len += _tcslen(pTrimBuf[idx]);
+										if (idx < nTrimSize) {
+											_tcscat(fpath, _T(" "));
+											len++;
+										}
+									}
+									_TCHAR* p = _tcsrchr(fpath, '\\');
+									if (p) {
+										// exclude path
+										len = _tcslen(p + sizeof(_TCHAR));
+										_tcsncpy(fname, p + sizeof(_TCHAR), len);
+									}
+									else {
+										_tcsncpy(fname, fpath, _MAX_FNAME);
+									}
 
-								if (!ReadExeFromFile(pExtArg, pDisc, szTmpFullPath, fname)) {
-									continue;
+									// Delete '\n'
+									fname[len - sizeof(_TCHAR)] = '\0';
+									_tcscat(szTmpFullPath, _T("\\"));
+									_tcscat(szTmpFullPath, fname);
+
+									if (!ReadExeFromFile(pExtArg, pDisc, szTmpFullPath, fname)) {
+										continue;
+									}
+									DWORD attr = GetFileAttributes(szTmpFullPath);
+									if (FILE_ATTRIBUTE_READONLY & attr) {
+										SetFileAttributes(szTmpFullPath, attr - FILE_ATTRIBUTE_READONLY);
+									}
+									if (!DeleteFile(szTmpFullPath)) {
+										OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+										OutputErrorString("Failed to DeleteFile %s\n", fname);
+									}
+									ZeroMemory(szTmpFullPath, sizeof(szTmpFullPath));
 								}
-								DWORD attr = GetFileAttributes(szTmpFullPath);
-								if (FILE_ATTRIBUTE_READONLY & attr) {
-									SetFileAttributes(szTmpFullPath, attr - FILE_ATTRIBUTE_READONLY);
-								}
-								if (!DeleteFile(szTmpFullPath)) {
-									OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
-									OutputErrorString("Failed to DeleteFile %s\n", fname);
-								}
-								ZeroMemory(szTmpFullPath, sizeof(szTmpFullPath));
+								nTrimSize = 0;
 							}
-							_fgetts(buf, sizeof(buf), fp);
-							nTrimSize = 0;
-						}
+						} while (1);
 						FcloseAndNull(fp);
 					}
 					if (!DeleteFile(szTmpPath)) {
@@ -2148,6 +2418,7 @@ BOOL ReadCDForCheckingExe(
 				}
 #else
 				// TODO: linux doesn't support yet
+#endif
 #endif
 			}
 		}

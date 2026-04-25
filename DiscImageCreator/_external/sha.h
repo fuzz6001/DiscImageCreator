@@ -188,6 +188,9 @@ typedef struct SHA512Context SHA384Context;
  */
 
 /* SHA-1 */
+#ifdef __cplusplus
+extern "C" {
+#endif
 extern int SHA1Reset(SHA1Context *);
 extern int SHA1Input(SHA1Context *, const uint8_t *bytes,
                      unsigned int bytecount);
@@ -230,4 +233,7 @@ extern int SHA512FinalBits(SHA512Context *, uint8_t bits,
                            unsigned int bit_count);
 extern int SHA512Result(SHA512Context *,
                         uint8_t Message_Digest[SHA512HashSize]);
+#ifdef __cplusplus
+}
+#endif
 #endif /* _SHA_H_ */

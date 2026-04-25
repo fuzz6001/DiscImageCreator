@@ -1,5 +1,5 @@
 /**
- * Copyright 2011-2025 sarami
+ * Copyright 2011-2026 sarami
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -82,10 +82,29 @@
 
 #define MAX_READ_ERROR_FILE_COUNT (16)
 
-#if defined _WIN32 && defined UNICODE
+#if defined (_WIN32) && defined (UNICODE)
 #define CHARWIDTH "h"
 #else
 #define CHARWIDTH
+#endif
+
+#if defined(_WIN32)
+#define SCSI_XFER_NONE    SCSI_IOCTL_DATA_UNSPECIFIED
+#define SCSI_XFER_OUT     SCSI_IOCTL_DATA_OUT
+#define SCSI_XFER_IN      SCSI_IOCTL_DATA_IN
+#define SCSI_XFER_UNSPEC  SCSI_IOCTL_DATA_UNSPECIFIED
+#elif defined(__linux__)
+#define SCSI_XFER_NONE    SG_DXFER_NONE
+#define SCSI_XFER_OUT     SG_DXFER_TO_DEV
+#define SCSI_XFER_IN      SG_DXFER_FROM_DEV
+#define SCSI_XFER_UNSPEC  SG_DXFER_NONE
+#elif defined(__APPLE__) && defined(__MACH__)
+typedef enum {
+    SCSI_XFER_NONE   = kSCSIDataTransfer_NoDataTransfer,
+    SCSI_XFER_OUT    = kSCSIDataTransfer_FromInitiatorToTarget,
+    SCSI_XFER_IN     = kSCSIDataTransfer_FromTargetToInitiator,
+    SCSI_XFER_UNSPEC = kSCSIDataTransfer_NoDataTransfer
+} odd_scsi_xfer_t;
 #endif
 
 // PLEXTOR specified command

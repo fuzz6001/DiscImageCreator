@@ -1,5 +1,5 @@
 /**
- * Copyright 2011-2025 sarami
+ * Copyright 2011-2026 sarami
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -3352,21 +3352,6 @@ VOID OutputReadBufferCapacity(
 			MAKEWORD(pReadBufCapaData->TotalBufferSize[1], pReadBufCapaData->TotalBufferSize[0])) / 1024,
 		MAKEUINT(MAKEWORD(pReadBufCapaData->AvailableBufferSize[3],	pReadBufCapaData->AvailableBufferSize[2]),
 			MAKEWORD(pReadBufCapaData->AvailableBufferSize[1], pReadBufCapaData->AvailableBufferSize[0])) / 1024);
-}
-
-VOID OutputSetSpeed(
-	PCDROM_SET_SPEED pSetspeed
-) {
-	OutputDriveLog(
-		OUTPUT_DHYPHEN_PLUS_STR("SetSpeed")
-		"\t    RequestType: %s\n"
-		"\t      ReadSpeed: %uKB/sec\n"
-		"\t     WriteSpeed: %uKB/sec\n"
-		"\tRotationControl: %s\n",
-		pSetspeed->RequestType == 0 ? _T("CdromSetSpeed") : _T("CdromSetStreaming"),
-		pSetspeed->ReadSpeed,
-		pSetspeed->WriteSpeed,
-		pSetspeed->RotationControl == 0 ? _T("CdromDefaultRotation") : _T("CdromCAVRotation"));
 }
 
 VOID OutputEepromUnknownByte(

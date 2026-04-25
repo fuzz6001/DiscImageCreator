@@ -1,5 +1,5 @@
 /**
- * Copyright 2011-2025 sarami
+ * Copyright 2011-2026 sarami
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@
 #include "outputScsiCmdLog.h"
 #include "outputScsiCmdLogforCD.h"
 #include "set.h"
+#include "_external/ps3auth/auth_service.h"
 
 BOOL TestUnitReady(
 	PEXT_ARG pExtArg,
@@ -35,14 +36,9 @@ BOOL TestUnitReady(
 	CDB::_CDB6GENERIC cdb = {};
 	cdb.OperationCode = SCSIOP_TEST_UNIT_READY;
 
-#ifdef _WIN32
-	INT direction = SCSI_IOCTL_DATA_IN;
-#else
-	INT direction = SG_DXFER_NONE;
-#endif
 	BYTE byScsiStatus = 0;
 	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB6GENERIC_LENGTH,
-		NULL, direction, 0, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+		NULL, SCSI_XFER_NONE, 0, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
 	}
@@ -59,14 +55,12 @@ BOOL Inquiry(
 	cdb.AllocationLength = sizeof(INQUIRYDATA);
 #ifdef _WIN32
 	_declspec(align(4)) INQUIRYDATA inquiryData = {};
-	INT direction = SCSI_IOCTL_DATA_IN;
 #else
 	__attribute__((aligned(4))) INQUIRYDATA inquiryData = {};
-	INT direction = SG_DXFER_FROM_DEV;
 #endif
 	BYTE byScsiStatus = 0;
 	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB6GENERIC_LENGTH, &inquiryData, 
-		direction, sizeof(INQUIRYDATA), &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE) ||
+		SCSI_XFER_IN, sizeof(INQUIRYDATA), &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE) ||
 		byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
 	}
@@ -79,7 +73,7 @@ BOOL Inquiry(
 	strncpy(pDevice->szVendorSpecific,
 		(LPCCH)&inquiryData.VendorSpecific, sizeof(pDevice->szVendorSpecific));
 
-	if (*pExecType != drivespeed) {
+	if (*pExecType != drivespeed && *pExecType != authps3) {
 		OutputInquiry(&inquiryData);
 	}
 	return TRUE;
@@ -100,14 +94,10 @@ BOOL ModeSense(
 		BYTE bySize = MODE_SENSE_SIZE - 1;
 		cdb.AllocationLength = bySize;
 		BYTE modesense[MODE_SENSE_SIZE] = {};
-#ifdef _WIN32
-		INT direction = SCSI_IOCTL_DATA_IN;
-#else
-		INT direction = SG_DXFER_FROM_DEV;
-#endif
+
 		BYTE byScsiStatus = 0;
 		if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB6GENERIC_LENGTH, &modesense,
-			direction, bySize, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE) ||
+			SCSI_XFER_IN, bySize, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE) ||
 			byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			// not false.
 		}
@@ -128,36 +118,11 @@ BOOL StartStopUnit(
 	cdb.OperationCode = SCSIOP_START_STOP_UNIT;
 	cdb.Start = (UCHAR)(Start & 0x01);
 	cdb.LoadEject = (UCHAR)(LoadEject & 0x01);
-#ifdef _WIN32
-	INT direction = SCSI_IOCTL_DATA_IN;
-#else
-	INT direction = SG_DXFER_NONE;
-#endif
-	BYTE byScsiStatus = 0;
-	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB6GENERIC_LENGTH
-		, NULL, direction, 0, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
-		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
-		return FALSE;
-	}
-	return TRUE;
-}
 
-BOOL SynchronizeCache(
-	PEXT_ARG pExtArg,
-	PDEVICE pDevice
-) {
-	CDB::_SYNCHRONIZE_CACHE10 cdb = {};
-	cdb.OperationCode = SCSIOP_SYNCHRONIZE_CACHE;
-	cdb.Immediate = TRUE;
-#ifdef _WIN32
-	INT direction = SCSI_IOCTL_DATA_IN;
-#else
-	INT direction = SG_DXFER_FROM_DEV;
-#endif
 	BYTE byScsiStatus = 0;
-	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH
-		, NULL, direction, 0, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE) ||
-		byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
+	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB6GENERIC_LENGTH, 
+		NULL, SCSI_XFER_NONE, 0, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
 	}
 	return TRUE;
@@ -181,14 +146,9 @@ BOOL ReadTOC(
 #ifdef _DEBUG
 	OutputString("pDisc->SCSI.toc address: %p\n", &pDisc->SCSI.toc);
 #endif
-#ifdef _WIN32
-	INT direction = SCSI_IOCTL_DATA_IN;
-#else
-	INT direction = SG_DXFER_FROM_DEV;
-#endif
 	BYTE byScsiStatus = 0;
-	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH
-		, &pDisc->SCSI.toc, direction, size.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE) ||
+	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH, 
+		&pDisc->SCSI.toc, SCSI_XFER_IN, size.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE) ||
 		byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		if (pDisc->SCSI.wCurrentMedia != ProfileDvdRom) {
 			return FALSE;
@@ -239,14 +199,9 @@ BOOL ReadTOCFull(
 	size.AsUShort = sizeof(CDROM_TOC_FULL_TOC_DATA);
 	REVERSE_BYTES_SHORT(&cdb.AllocationLength, &size);
 
-#ifdef _WIN32
-	INT direction = SCSI_IOCTL_DATA_IN;
-#else
-	INT direction = SG_DXFER_FROM_DEV;
-#endif
 	BYTE byScsiStatus = 0;
-	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH
-		, pFullTocData, direction, size.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH, 
+		pFullTocData, SCSI_XFER_IN, size.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 #if 0
 		UINT uiBufLen = CD_RAW_SECTOR_SIZE + CD_RAW_READ_SUBCODE_SIZE;
@@ -303,8 +258,8 @@ BOOL ReadTOCFull(
 	REVERSE_BYTES_SHORT(&cdb.AllocationLength, &size);
 	BOOL bRet = TRUE;
 	try {
-		if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH
-			, pFullToc, direction, size.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+		if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH, 
+			pFullToc, SCSI_XFER_IN, size.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
 			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			throw FALSE;
 		}
@@ -368,14 +323,12 @@ BOOL ReadTOCPma(
 
 #ifdef _WIN32
 	_declspec(align(4)) CDROM_TOC_PMA_DATA pma = { 0 };
-	INT direction = SCSI_IOCTL_DATA_IN;
 #else
 	__attribute__((aligned(4))) CDROM_TOC_PMA_DATA pma = {};
-	INT direction = SG_DXFER_FROM_DEV;
 #endif
 	BYTE byScsiStatus = 0;
-	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH
-		, &pma, direction, size.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH, 
+		&pma, SCSI_XFER_IN, size.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		OutputDriveNoSupportLog("READ_TOC_PMA");
 		return TRUE;
@@ -394,8 +347,8 @@ BOOL ReadTOCPma(
 		}
 		size.AsUShort = wTocPmaAll;
 		REVERSE_BYTES_SHORT(&cdb.AllocationLength, &size);
-		if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH
-			, pTocPma, direction, size.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+		if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH, 
+			pTocPma, SCSI_XFER_IN, size.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
 			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			OutputDriveNoSupportLog("READ_TOC_PMA");
 			return TRUE;
@@ -435,14 +388,12 @@ BOOL ReadTOCAtip(
 
 #ifdef _WIN32
 	_declspec(align(4)) CDROM_TOC_ATIP_DATA atip = { 0 };
-	INT direction = SCSI_IOCTL_DATA_IN;
 #else
 	__attribute__((aligned(4))) CDROM_TOC_ATIP_DATA atip = {};
-	INT direction = SG_DXFER_FROM_DEV;
 #endif
 	BYTE byScsiStatus = 0;
-	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH
-		, &atip, direction, size.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH, 
+		&atip, SCSI_XFER_IN, size.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		OutputDriveNoSupportLog("READ_TOC_ATIP");
 		return TRUE;
@@ -459,8 +410,8 @@ BOOL ReadTOCAtip(
 	}
 	size.AsUShort = wTocAtipAll;
 	REVERSE_BYTES_SHORT(&cdb.AllocationLength, &size);
-	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH
-		, pTocAtip, direction, size.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH, 
+		pTocAtip, SCSI_XFER_IN, size.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		OutputDriveNoSupportLog("READ_TOC_ATIP");
 		return TRUE;
@@ -487,15 +438,13 @@ BOOL ReadTOCText(
 
 #ifdef _WIN32
 	_declspec(align(4)) CDROM_TOC_CD_TEXT_DATA tocText = { 0 };
-	INT direction = SCSI_IOCTL_DATA_IN;
 #else
 	__attribute__((aligned(4))) CDROM_TOC_CD_TEXT_DATA tocText = {}; 
-	INT direction = SG_DXFER_FROM_DEV;
 #endif
 	OutputDiscLog(OUTPUT_DHYPHEN_PLUS_STR("CDTEXT"));
 	BYTE byScsiStatus = 0;
-	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH
-		, &tocText, direction, size.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH, 
+		&tocText, SCSI_XFER_IN, size.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		// not false. because undefined mmc1..
 		OutputDriveNoSupportLog("Nothing CDTEXT or READ_TOC_EX_FORMAT_CDTEXT");
@@ -545,8 +494,8 @@ BOOL ReadTOCText(
 	LPCH pTmpText = NULL;
 	BOOL bRet = TRUE;
 	try {
-		if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH
-			, pTocText, direction, size.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+		if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH, 
+			pTocText, SCSI_XFER_IN, size.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
 			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			throw FALSE;
 		}
@@ -656,14 +605,12 @@ BOOL GetConfiguration(
 
 #ifdef _WIN32
 	_declspec(align(4)) GET_CONFIGURATION_HEADER configHeader = { 0 };
-	INT direction = SCSI_IOCTL_DATA_IN;
 #else
 	__attribute__((aligned(4))) GET_CONFIGURATION_HEADER configHeader = {};
-	INT direction = SG_DXFER_FROM_DEV;
 #endif
 	BYTE byScsiStatus = 0;
-	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH
-		, &configHeader, direction, size.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH, 
+		&configHeader, SCSI_XFER_IN, size.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		pDisc->SCSI.wCurrentMedia = ProfileCdrom;
 		// not false. because undefined mmc1..
@@ -711,8 +658,8 @@ BOOL GetConfiguration(
 			size.AsUShort = (USHORT)dwAllLen;
 			REVERSE_BYTES_SHORT(&cdb.AllocationLength, &size);
 
-			if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH
-				, lpConf, direction, size.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+			if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH, 
+				lpConf, SCSI_XFER_IN, size.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
 				|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 				// not false. because undefined mmc1..
 				OutputDriveNoSupportLog("GET_CONFIGURATION");
@@ -744,14 +691,12 @@ BOOL ReadDiscInformation(
 
 #ifdef _WIN32
 	_declspec(align(4)) DISC_INFORMATION discInformation = {};
-	INT direction = SCSI_IOCTL_DATA_IN;
 #else
 	__attribute__((aligned(4))) DISC_INFORMATION discInformation = {};
-	INT direction = SG_DXFER_FROM_DEV;
 #endif
 	BYTE byScsiStatus = 0;
-	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH
-		, &discInformation, direction, size.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE) ||
+	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH, 
+		&discInformation, SCSI_XFER_IN, size.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE) ||
 		byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		// not false.
 		OutputDriveNoSupportLog("READ_DISC_INFORMATION");
@@ -776,14 +721,10 @@ BOOL ModeSense10(
 	size.AsUShort = MODE_SENSE_SIZE;
 	REVERSE_BYTES_SHORT(&cdb.AllocationLength, &size);
 	BYTE modesense[MODE_SENSE_SIZE] = {};
-#ifdef _WIN32
-	INT direction = SCSI_IOCTL_DATA_IN;
-#else
-	INT direction = SG_DXFER_FROM_DEV;
-#endif
+
 	BYTE byScsiStatus = 0;
-	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH
-		, &modesense, direction, size.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE) ||
+	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH, 
+		&modesense, SCSI_XFER_IN, size.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE) ||
 		byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		// not false.
 		OutputDriveNoSupportLog("MODE_SENSE10");
@@ -808,14 +749,12 @@ BOOL ReadBufferCapacity(
 
 #ifdef _WIN32
 		_declspec(align(4)) READ_BUFFER_CAPACITY_DATA readBufCapaData = {};
-		INT direction = SCSI_IOCTL_DATA_IN;
 #else
 		__attribute__((aligned(4))) READ_BUFFER_CAPACITY_DATA readBufCapaData = {};
-		INT direction = SG_DXFER_FROM_DEV;
 #endif
 		BYTE byScsiStatus = 0;
-		if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB12GENERIC_LENGTH
-			, &readBufCapaData, direction, size.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+		if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB12GENERIC_LENGTH, 
+			&readBufCapaData, SCSI_XFER_IN, size.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
 			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			// not false.
 			OutputDriveNoSupportLog("READ_BUFFER_CAPACITY");
@@ -837,20 +776,18 @@ BOOL SendKey(
 ) {
 	CDB::_SEND_KEY cdb = {};
 	cdb.OperationCode = SCSIOP_SEND_KEY;
+	if (IsValidPS3Drive(pDevice)) {
+		cdb.Reserved2[5] = 0xE0;
+	}
 	TWO_BYTE size;
 	size.AsUShort = keyLength;
 	REVERSE_BYTES_SHORT(&cdb.ParameterListLength, &size);
 	cdb.KeyFormat = (BYTE)(keyFormat & 0x3f);
 	cdb.AGID = (BYTE)(agid & 0x3);
 
-#ifdef _WIN32
-	INT direction = SCSI_IOCTL_DATA_IN;
-#else
-	INT direction = SG_DXFER_TO_DEV;
-#endif
 	BYTE byScsiStatus = 0;
 	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB12GENERIC_LENGTH,
-		key, direction, size.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+		key, SCSI_XFER_OUT, size.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
 	}
@@ -868,20 +805,18 @@ BOOL ReportKey(
 ) {
 	CDB::_REPORT_KEY cdb = {};
 	cdb.OperationCode = SCSIOP_REPORT_KEY;
+	if (IsValidPS3Drive(pDevice)) {
+		cdb.Reserved2[1] = 0xE0;
+	}
 	TWO_BYTE size;
 	size.AsUShort = keyLength;
 	REVERSE_BYTES_SHORT(&cdb.AllocationLength, &size);
 	cdb.KeyFormat = (BYTE)(keyFormat & 0x3f);
 	cdb.AGID = (BYTE)(agid & 0x3);
 
-#ifdef _WIN32
-	INT direction = SCSI_IOCTL_DATA_IN;
-#else
-	INT direction = SG_DXFER_FROM_DEV;
-#endif
 	BYTE byScsiStatus = 0;
 	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB12GENERIC_LENGTH,
-		key, direction, size.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+		key, SCSI_XFER_IN, size.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
  		return FALSE;
 	}
@@ -894,64 +829,41 @@ BOOL SetDiscSpeed(
 	PDEVICE pDevice,
 	UINT uiDiscSpeedNum
 ) {
-//	if ((*pExecType == cd || *pExecType == gd || *pExecType == audio || *pExecType == data)
-//		&& (pDevice->FEATURE.bySetCDSpeed || *pExecType == dvd)) {
-		WORD wSpeed = 0;
-		// https://msdn.microsoft.com/en-us/library/windows/hardware/ff551368(v=vs.85).aspx
-		// https://msdn.microsoft.com/ja-jp/library/ff551396(v=vs.85).aspx
-#ifdef _WIN32
-		_declspec(align(4)) CDROM_SET_SPEED setspeed = { CdromSetSpeed, 0, 0, CdromDefaultRotation };
-		INT direction = SCSI_IOCTL_DATA_IN;
-#else
-		__attribute__((aligned(4))) CDROM_SET_SPEED setspeed = { CdromSetSpeed, 0, 0, CdromDefaultRotation };
-		INT direction = SG_DXFER_TO_DEV;
-#endif
-		if ((*pExecType == cd || *pExecType == swap || *pExecType == gd || *pExecType == audio || *pExecType == data) &&
-			0 < uiDiscSpeedNum && uiDiscSpeedNum <= CD_DRIVE_MAX_SPEED) {
-			// http://senbee.seesaa.net/article/26247159.html
-			// 2048 x 75 = 153600 B -> 150 KiB
-			// 2352 x 75 = 176400 B -> 172,265625 KiB
-			wSpeed = (WORD)(CD_RAW_SECTOR_SIZE * 75 * uiDiscSpeedNum / 1000);
-			setspeed.ReadSpeed = wSpeed;
-		}
-		else if ((*pExecType == dvd || IsXbox(pExecType)) &&
-			0 < uiDiscSpeedNum && uiDiscSpeedNum <= DVD_DRIVE_MAX_SPEED) {
-			// Read and write speeds for the first DVD drives and players were of
-			// 1,385 kB/s (1,353 KiB/s); this speed is usually called "1x".
-			// 2048 x 75 x 9 = 1384448 B -> 1352 KiB
-			wSpeed = (WORD)(1385 * uiDiscSpeedNum);
-			setspeed.ReadSpeed = wSpeed;
-		}
-		else if ((*pExecType == bd) &&
-			0 < uiDiscSpeedNum && uiDiscSpeedNum <= BD_DRIVE_MAX_SPEED) {
-			wSpeed = (WORD)(4496 * uiDiscSpeedNum);
-			setspeed.ReadSpeed = wSpeed;
-		}
-		else {
-			wSpeed = 0xffff;
-			setspeed.ReadSpeed = pDevice->wMaxReadSpeed;
-		}
-		CDB::_SET_CD_SPEED cdb = {};
-		cdb.OperationCode = SCSIOP_SET_CD_SPEED;
-		TWO_BYTE size;
-		size.AsUShort = wSpeed;
-		REVERSE_BYTES_SHORT(&cdb.ReadSpeed, &size);
-		// https://msdn.microsoft.com/en-us/library/windows/hardware/ff551370(v=vs.85).aspx
-		setspeed.RequestType = CdromSetSpeed;
+	WORD wSpeed = 0;
+	// https://msdn.microsoft.com/en-us/library/windows/hardware/ff551368(v=vs.85).aspx
+	// https://msdn.microsoft.com/ja-jp/library/ff551396(v=vs.85).aspx
+	if ((*pExecType == cd || *pExecType == swap || *pExecType == gd || *pExecType == audio || *pExecType == data) &&
+		0 < uiDiscSpeedNum && uiDiscSpeedNum <= CD_DRIVE_MAX_SPEED) {
+		// http://senbee.seesaa.net/article/26247159.html
+		// 2048 x 75 = 153600 B -> 150 KiB
+		// 2352 x 75 = 176400 B -> 172,265625 KiB
+		wSpeed = (WORD)(CD_RAW_SECTOR_SIZE * 75 * uiDiscSpeedNum / 1000);
+	}
+	else if ((*pExecType == dvd || IsXbox(pExecType)) &&
+		0 < uiDiscSpeedNum && uiDiscSpeedNum <= DVD_DRIVE_MAX_SPEED) {
+		// Read and write speeds for the first DVD drives and players were of
+		// 1,385 kB/s (1,353 KiB/s); this speed is usually called "1x".
+		// 2048 x 75 x 9 = 1384448 B -> 1352 KiB
+		wSpeed = (WORD)(1385 * uiDiscSpeedNum);
+	}
+	else {
+		wSpeed = 0xffff;
+	}
+	CDB::_SET_CD_SPEED cdb = {};
+	cdb.OperationCode = SCSIOP_SET_CD_SPEED;
+	TWO_BYTE size;
+	size.AsUShort = wSpeed;
+	REVERSE_BYTES_SHORT(&cdb.ReadSpeed, &size);
+	// https://msdn.microsoft.com/en-us/library/windows/hardware/ff551370(v=vs.85).aspx
 
-		BYTE byScsiStatus = 0;
-		if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB12GENERIC_LENGTH, &setspeed, 
-			direction, sizeof(CDROM_SET_SPEED), &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
-			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
-			// Somehow PX-W1210S fails...
-			OutputDriveNoSupportLog("SET_CD_SPEED");
-			OutputDriveLog("Or if you use the SATA/IDE to USB adapter, doesn't support this command\n");
-		}
-		else {
-			OutputSetSpeed(&setspeed);
-			OutputString("Set the drive speed: %uKB/sec\n", setspeed.ReadSpeed);
-		}
-//	}
+	BYTE byScsiStatus = 0;
+	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB12GENERIC_LENGTH, 
+		NULL, SCSI_XFER_NONE, 0, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
+		// Somehow PX-W1210S fails...
+		OutputDriveNoSupportLog("SET_CD_SPEED");
+		OutputDriveLog("Or if you use the SATA/IDE to USB adapter, doesn't support this command\n");
+	}
 	return TRUE;
 }
 
@@ -960,7 +872,6 @@ BOOL SetStreaming(
 	PDEVICE pDevice,
 	DWORD dwDiscSpeedNum
 ) {
-	UNREFERENCED_PARAMETER(dwDiscSpeedNum);
 	CDB::_SET_STREAMING cdb = {};
 	cdb.OperationCode = SCSIOP_SET_STREAMING;
 #ifdef _WIN32
@@ -971,61 +882,30 @@ BOOL SetStreaming(
 	TWO_BYTE size;
 	size.AsUShort = sizeof(PERFORMANCE_DESCRIPTOR);
 	REVERSE_BYTES_SHORT(&cdb.ParameterListLength, &size);
-#if 1
-	FOUR_BYTE LBA;
-	LBA.AsULong = 0x7FFFFFFF;
-	REVERSE_BYTES(&pd.EndLba, &LBA);
-	FOUR_BYTE RSize;
-	RSize.AsULong = 0;
-	REVERSE_BYTES(&pd.ReadSize, &RSize);
-	FOUR_BYTE WSize;
-	WSize.AsULong = 0;
-	REVERSE_BYTES(&pd.WriteSize, &WSize);
 
-//	INT nTime = 0x3e8;
-//	REVERSE_BYTES(&pd.ReadTime, &nTime);
-//	REVERSE_BYTES(&pd.WriteTime, &nTime);
-#endif
-#ifdef _WIN32
-	INT direction = SCSI_IOCTL_DATA_OUT;
-#else
-	INT direction = SG_DXFER_FROM_DEV;
-#endif
+	FOUR_BYTE v;
+	v.AsULong = 0;
+	REVERSE_BYTES(&pd.StartLba, &v);
+	v.AsULong = 0xFFFFFFFF;
+	REVERSE_BYTES(&pd.EndLba, &v);
+	if (0 < dwDiscSpeedNum && dwDiscSpeedNum <= BD_DRIVE_MAX_SPEED) {
+		v.AsULong = 4496 * dwDiscSpeedNum;
+	}
+	else {
+		v.AsULong = 0xFFFFFFFF;
+	}
+	REVERSE_BYTES(&pd.ReadSize, &v);
+	REVERSE_BYTES(&pd.WriteSize, &v);
+	v.AsULong = 1000;
+	REVERSE_BYTES(&pd.ReadTime, &v);
+	REVERSE_BYTES(&pd.WriteTime, &v);
+
 	BYTE byScsiStatus = 0;
-	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB12GENERIC_LENGTH
-		, &pd, direction, size.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB12GENERIC_LENGTH, 
+		&pd, SCSI_XFER_OUT, size.AsUShort, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
 	}
-	OutputDriveLog(
-		OUTPUT_DHYPHEN_PLUS_STR("SetStreaming")
-		"\t        RandomAccess: %s\n"
-		"\t               Exact: %s\n"
-		"\t     RestoreDefaults: %s\n"
-		"\tWriteRotationControl: %s\n"
-		"\t            StartLba: %u (%x)\n"
-		"\t              EndLba: %u (%x)\n"
-		"\t            ReadSize: %u (%x)\n"
-		"\t            ReadTime: %u (%x)\n"
-		"\t           WriteSize: %u (%x)\n"
-		"\t           WriteTime: %u (%x)\n"
-		, BOOLEAN_TO_STRING_YES_NO(pd.RandomAccess)
-		, BOOLEAN_TO_STRING_YES_NO(pd.Exact)
-		, BOOLEAN_TO_STRING_YES_NO(pd.RestoreDefaults)
-		, BOOLEAN_TO_STRING_YES_NO(pd.WriteRotationControl)
-		, MAKEUINT(MAKEWORD(pd.StartLba[3], pd.StartLba[2]), MAKEWORD(pd.StartLba[1], pd.StartLba[0]))
-		, MAKEUINT(MAKEWORD(pd.StartLba[3], pd.StartLba[2]), MAKEWORD(pd.StartLba[1], pd.StartLba[0]))
-		, MAKEUINT(MAKEWORD(pd.EndLba[3], pd.EndLba[2]), MAKEWORD(pd.EndLba[1], pd.EndLba[0]))
-		, MAKEUINT(MAKEWORD(pd.EndLba[3], pd.EndLba[2]), MAKEWORD(pd.EndLba[1], pd.EndLba[0]))
-		, MAKEUINT(MAKEWORD(pd.ReadSize[3], pd.ReadSize[2]), MAKEWORD(pd.ReadSize[1], pd.ReadSize[0]))
-		, MAKEUINT(MAKEWORD(pd.ReadSize[3], pd.ReadSize[2]), MAKEWORD(pd.ReadSize[1], pd.ReadSize[0]))
-		, MAKEUINT(MAKEWORD(pd.ReadTime[3], pd.ReadTime[2]), MAKEWORD(pd.ReadTime[1], pd.ReadTime[0]))
-		, MAKEUINT(MAKEWORD(pd.ReadTime[3], pd.ReadTime[2]), MAKEWORD(pd.ReadTime[1], pd.ReadTime[0]))
-		, MAKEUINT(MAKEWORD(pd.WriteSize[3], pd.WriteSize[2]), MAKEWORD(pd.WriteSize[1], pd.WriteSize[0]))
-		, MAKEUINT(MAKEWORD(pd.WriteSize[3], pd.WriteSize[2]), MAKEWORD(pd.WriteSize[1], pd.WriteSize[0]))
-		, MAKEUINT(MAKEWORD(pd.WriteTime[3], pd.WriteTime[2]), MAKEWORD(pd.WriteTime[1], pd.WriteTime[0]))
-		, MAKEUINT(MAKEWORD(pd.WriteTime[3], pd.WriteTime[2]), MAKEWORD(pd.WriteTime[1], pd.WriteTime[0]))
-	);
 	return TRUE;
 }
 
@@ -1056,14 +936,10 @@ BOOL SetSpeedRead(
 		cdb.LogicalBlock[0] = PLXTR_FLAG_SPEED_READ;
 		cdb.LogicalBlock[1] = (BYTE)bState;
 		cdb.Reserved2 = 0x08;
-#ifdef _WIN32
-		INT direction = SCSI_IOCTL_DATA_IN;
-#else
-		INT direction = SG_DXFER_FROM_DEV;
-#endif
+
 		BYTE byScsiStatus = 0;
-		if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB12GENERIC_LENGTH
-			, buf, direction, sizeof(buf), &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+		if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB12GENERIC_LENGTH, 
+			buf, SCSI_XFER_IN, sizeof(buf), &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
 			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			return FALSE;
 		}
@@ -1083,14 +959,10 @@ BOOL Reset(
 ) {
 	CDB::_CDB6GENERIC cdb = {};
 	cdb.OperationCode = SCSIOP_PLXTR_RESET;
-#ifdef _WIN32
-	INT direction = SCSI_IOCTL_DATA_IN;
-#else
-	INT direction = SG_DXFER_FROM_DEV;
-#endif
+
 	BYTE byScsiStatus = 0;
-	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB6GENERIC_LENGTH
-		, NULL, direction, 0, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB6GENERIC_LENGTH, 
+		NULL, SCSI_XFER_NONE, 0, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
 	}
@@ -1141,11 +1013,6 @@ BOOL ReadEeprom(
 	cdb.RelativeAddress = (UCHAR)(bHigh & 0x01);
 
 	BOOL bRet = TRUE;
-#ifdef _WIN32
-	INT direction = SCSI_IOCTL_DATA_IN;
-#else
-	INT direction = SG_DXFER_FROM_DEV;
-#endif
 	BYTE byScsiStatus = 0;
 	OutputDriveLog(OUTPUT_DHYPHEN_PLUS_STR("EEPROM"));
 	try {
@@ -1153,8 +1020,8 @@ BOOL ReadEeprom(
 		for (BYTE idx = 0; idx < 4; idx++) {
 			size.AsULong = tLen;
 			REVERSE_BYTES(&cdb.TransferLength, &size);
-			if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB12GENERIC_LENGTH
-				, pBuf, direction, BufLen, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+			if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB12GENERIC_LENGTH, 
+				pBuf, SCSI_XFER_IN, BufLen, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
 				|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 				throw FALSE;
 			}
@@ -1207,14 +1074,10 @@ BOOL ReadCacheForLgAsus(
 	cdb.TransferBlocksMsb = BYTE((dwBufSize >> 16) & 0xff);
 	cdb.TransferBlocksLsb = BYTE((dwBufSize >> 8) & 0xff);
 	cdb.Control = BYTE(dwBufSize & 0xff);
-#ifdef _WIN32
-	INT direction = SCSI_IOCTL_DATA_IN;
-#else
-	INT direction = SG_DXFER_FROM_DEV;
-#endif
+
 	BYTE byScsiStatus = 0;
-	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH
-		, aBuf, direction, dwBufSize, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH, 
+		aBuf, SCSI_XFER_IN, dwBufSize, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
 	}
@@ -1283,6 +1146,60 @@ BOOL ReadCacheForLgAsus(
 	return TRUE;
 }
 
+BOOL Ps3DriveSpecificE0(
+	PDEVICE pDevice,
+	LPBYTE header,
+	LPBYTE payload,
+	DWORD dwPayloadSize
+) {
+	CDB::_CDB12 cdb = {};
+	cdb.OperationCode = 0xE0;
+	cdb.LogicalBlock[0] = (UCHAR)dwPayloadSize;
+	cdb.LogicalBlock[2] = header[0];
+	cdb.LogicalBlock[3] = header[1];
+	cdb.TransferLength[0] = header[2];
+	cdb.TransferLength[1] = header[3];
+	cdb.TransferLength[2] = header[4];
+	cdb.TransferLength[3] = header[5];
+	cdb.Reserved2 = header[6];
+	cdb.Control = header[7];
+
+	BYTE byScsiStatus = 0;
+	if (!ScsiPassThroughDirect(NULL, pDevice, &cdb, CDB12GENERIC_LENGTH, 
+		payload, SCSI_XFER_IN, dwPayloadSize, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
+		return FALSE;
+	}
+	return TRUE;
+}
+
+BOOL Ps3DriveSpecificE1(
+	PDEVICE pDevice,
+	LPBYTE header,
+	LPBYTE payload,
+	DWORD dwPayloadSize
+) {
+	CDB::_CDB12 cdb = {};
+	cdb.OperationCode = 0xE1;
+	cdb.LogicalBlock[0] = (UCHAR)dwPayloadSize;
+	cdb.LogicalBlock[2] = header[0];
+	cdb.LogicalBlock[3] = header[1];
+	cdb.TransferLength[0] = header[2];
+	cdb.TransferLength[1] = header[3];
+	cdb.TransferLength[2] = header[4];
+	cdb.TransferLength[3] = header[5];
+	cdb.Reserved2 = header[6];
+	cdb.Control = header[7];
+
+	BYTE byScsiStatus = 0;
+	if (!ScsiPassThroughDirect(NULL, pDevice, &cdb, CDB12GENERIC_LENGTH, 
+		payload, SCSI_XFER_OUT, dwPayloadSize, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
+		return FALSE;
+	}
+	return TRUE;
+}
+
 BOOL ReadDriveInformation(
 	PEXEC_TYPE pExecType,
 	PEXT_ARG pExtArg,
@@ -1291,7 +1208,7 @@ BOOL ReadDriveInformation(
 	UINT uiCDSpeed
 ) {
 #ifdef _WIN32
-	if (*pExecType != drivespeed) {
+	if (*pExecType != drivespeed && *pExecType != authps3) {
 		BOOL bBusTypeUSB = FALSE;
 		if (!StorageQueryProperty(pDevice, &bBusTypeUSB)) {
 			return FALSE;
@@ -1309,7 +1226,10 @@ BOOL ReadDriveInformation(
 	if (!Inquiry(pExecType, pExtArg, pDevice)) {
 		return FALSE;
 	}
-	if (*pExecType != fd && *pExecType != disk) {
+	if (*pExecType == authps3 && IsValidPS3Drive(pDevice)) {
+		auth_service_run(pDevice, select_cmd::auth, NULL);
+	}
+	else if (*pExecType != fd && *pExecType != disk) {
 		// 4th: check PLEXTOR or not here (because use modesense and from there)
 		if (IsValidPlextorDrive(pExtArg, pDevice)) {
 			if ((PLXTR_DRIVE_TYPE)pDevice->byPlxtrDrive == PLXTR_DRIVE_TYPE::NotLatest) {
@@ -1346,22 +1266,20 @@ BOOL ReadDriveInformation(
 			pDevice->FEATURE.byModePage2a = TRUE;
 		}
 		if (*pExecType != drivespeed) {
-#if 0
-			if (*pExecType == dvd) {
+			if (*pExecType == bd) {
 				SetStreaming(pExtArg, pDevice, uiCDSpeed);
 			}
 			else {
-#endif
 				if (uiCDSpeed != 0) {
 					SetDiscSpeed(pExecType, pExtArg, pDevice, uiCDSpeed);
 				}
-#if 0
 			}
-#endif
 			ReadBufferCapacity(pExtArg, pDevice);
 		}
 	}
-	ModeSense10(pExecType, pExtArg, pDevice, pDisc);
+	if (*pExecType != authps3) {
+		ModeSense10(pExecType, pExtArg, pDevice, pDisc);
+	}
 	return TRUE;
 }
 

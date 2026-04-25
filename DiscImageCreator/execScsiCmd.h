@@ -1,5 +1,5 @@
 /**
- * Copyright 2011-2025 sarami
+ * Copyright 2011-2026 sarami
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,11 +32,6 @@ BOOL StartStopUnit(
 	PDEVICE pDevice,
 	BYTE Start,
 	BYTE LoadEject
-);
-
-BOOL SynchronizeCache(
-	PEXT_ARG pExtArg,
-	PDEVICE pDevice
 );
 
 BOOL ReadTOC(
@@ -111,6 +106,12 @@ BOOL SetDiscSpeed(
 	UINT uiDiscSpeedNum
 );
 
+BOOL SetStreaming(
+	PEXT_ARG pExtArg,
+	PDEVICE pDevice,
+	DWORD dwDiscSpeedNum
+);
+
 BOOL SetSpeedRead(
 	PEXT_ARG pExtArg,
 	PDEVICE pDevice,
@@ -130,6 +131,20 @@ BOOL ReadCacheForLgAsus(
 	INT nLineNum,
 	INT nLBA,
 	LPBOOL lpbCached
+);
+
+BOOL Ps3DriveSpecificE0(
+	PDEVICE pDevice,
+	LPBYTE header,
+	LPBYTE payload,
+	DWORD dwPayloadSize
+);
+
+BOOL Ps3DriveSpecificE1(
+	PDEVICE pDevice,
+	LPBYTE header,
+	LPBYTE payload,
+	DWORD dwPayloadSize
 );
 
 BOOL ReadDriveInformation(

@@ -1,5 +1,5 @@
 /**
- * Copyright 2011-2025 sarami
+ * Copyright 2011-2026 sarami
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -106,11 +106,6 @@ BOOL Read10(
 	cdb.TransferBlocksMsb = (UCHAR)(dwTransferLen >> 8);
 	cdb.TransferBlocksLsb = (UCHAR)dwTransferLen;
 
-#ifdef _WIN32
-	INT direction = SCSI_IOCTL_DATA_IN;
-#else
-	INT direction = SG_DXFER_FROM_DEV;
-#endif
 	BYTE byScsiStatus = 0;
 	CalcInit(pExtArg, &pHash->pHashChunk[pHash->uiIndex]);
 
@@ -125,7 +120,7 @@ BOOL Read10(
 		cdb.LogicalBlockByte2 = (UCHAR)(dwLBA >> 8);
 		cdb.LogicalBlockByte3 = (UCHAR)dwLBA;
 		if (!ScsiPassThroughDirect(NULL, pDevice, &cdb, CDB10GENERIC_LENGTH, lpBuf,
-			direction, pDisc->dwBytesPerSector * dwTransferLen, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
+			SCSI_XFER_IN, pDisc->dwBytesPerSector * dwTransferLen, &byScsiStatus, _T(__FUNCTION__), __LINE__, TRUE)
 			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			if (GetLastError() == 87) {
 				OutputString("Change the transfer length: %lu -> ", dwTransferLen);
@@ -148,11 +143,11 @@ BOOL Read10(
 }
 
 BOOL ReadFATDirectoryRecord(
-#ifdef _WIN32
+#if defined(_WIN32)
 	HANDLE handle,
-#elif __linux__
+#elif defined(__linux__)
 	int handle,
-#elif __MACH__
+#elif defined(__APPLE__) && defined(__MACH__)
 	SCSITaskInterface** handle,
 #endif
 	LARGE_INTEGER seekPos,
@@ -223,11 +218,11 @@ BOOL ReadFATDirectoryRecord(
 }
 
 BOOL ReadExFATDirectoryEntry(
-#ifdef _WIN32
+#if defined(_WIN32)
 	HANDLE handle,
-#elif __linux__
+#elif defined(__linux__)
 	int handle,
-#elif __MACH__
+#elif defined(__APPLE__) && defined(__MACH__)
 	SCSITaskInterface** handle,
 #endif
 	DWORD dwBytesPerSector,
@@ -455,12 +450,12 @@ BOOL DVDGetRegion(
 	PDEVICE pDevice
 ) {
 	DVD_REGION dvdRegion = {};
-#ifdef _WIN32
+#if defined(_WIN32)
 	DWORD dwReturned = 0;
 	BOOL bRet = DeviceIoControl(pDevice->hDevice,
 		IOCTL_DVD_GET_REGION, &dvdRegion, sizeof(DVD_REGION),
 		&dvdRegion, sizeof(DVD_REGION), &dwReturned, NULL);
-#elif __linux__
+#elif defined(__linux__)
 	dvd_authinfo auth_info;
 
 	memset(&auth_info, 0, sizeof(auth_info));
@@ -469,7 +464,7 @@ BOOL DVDGetRegion(
 	int bRet = ioctl(pDevice->hDevice, DVD_AUTH, &auth_info);
 	dvdRegion.SystemRegion = auth_info.lrpcs.region_mask;
 	dvdRegion.ResetCount = auth_info.lrpcs.type;
-#elif __MACH__
+#elif defined(__APPLE__) && defined(__MACH__)
 	int bRet = 0;
 #endif
 	if (bRet) {
@@ -512,7 +507,7 @@ BOOL ScsiPassThroughDirect(
 	BOOL bOutputMsg
 ) {
 	SCSI_PASS_THROUGH_DIRECT_WITH_BUFFER swb = {};
-#ifdef _WIN32
+#if defined(_WIN32)
 	swb.Sptd.Length = sizeof(SCSI_PASS_THROUGH_DIRECT);
 	swb.Sptd.PathId = pDevice->address.PathId;
 	swb.Sptd.TargetId = pDevice->address.TargetId;
@@ -526,7 +521,7 @@ BOOL ScsiPassThroughDirect(
 	swb.Sptd.SenseInfoOffset =
 		offsetof(SCSI_PASS_THROUGH_DIRECT_WITH_BUFFER, SenseData);
 	memcpy(swb.Sptd.Cdb, lpCdb, byCdbLength);
-#elif __linux__
+#elif defined(__linux__)
 	swb.io_hdr.interface_id = 'S';
 	swb.io_hdr.dxfer_direction = nDataDirection;
 	swb.io_hdr.cmd_len = byCdbLength;
@@ -537,7 +532,7 @@ BOOL ScsiPassThroughDirect(
 	swb.io_hdr.sbp = swb.Dummy;
 	swb.io_hdr.timeout = (unsigned int)pDevice->dwTimeOutValue;
 //	swb.io_hdr.flags = SG_FLAG_DIRECT_IO;
-#elif __MACH__
+#elif defined(__APPLE__) && defined(__MACH__)
 	// https://developer.apple.com/library/archive/documentation/DeviceDrivers/Conceptual/WorkingWithSAM/WWS_SAMDevInt/WWS_SAM_DevInt.html#//apple_ref/doc/uid/TP30000387-SW1
 	IOReturn         err  = 0;
 	IOVirtualRange* range = NULL;
@@ -560,12 +555,12 @@ BOOL ScsiPassThroughDirect(
 	}
 	// Set the scatter-gather entry in the task
 	if (kIOReturnSuccess != (err = (*pDevice->hDevice)->SetScatterGatherEntries(
-		pDevice->hDevice, range, 1, dwBufferLength, kSCSIDataTransfer_FromTargetToInitiator))) {
+		pDevice->hDevice, range, 1, dwBufferLength, nDataDirection))) {
 		fprintf(stderr, "*********** ERROR Setting SG Entries ***********\n\n");
 		return FALSE;
 	}
 	// Set the timeout in the task
-	if (kIOReturnSuccess != (err = (*pDevice->hDevice)->SetTimeoutDuration(pDevice->hDevice, 10000))) {
+	if (kIOReturnSuccess != (err = (*pDevice->hDevice)->SetTimeoutDuration(pDevice->hDevice, pDevice->dwTimeOutValue))) {
 		fprintf(stderr, "*********** ERROR Setting Timeout ***********\n\n");
 		return FALSE;
 	}
@@ -599,7 +594,7 @@ BOOL ScsiPassThroughDirect(
 			swb.SenseData.AdditionalSenseCodeQualifier == 0x00) {
 			bNoSense = TRUE;
 		}
-#ifdef _WIN32
+#if defined(_WIN32)
 		if (swb.Sptd.ScsiStatus >= SCSISTAT_CHECK_CONDITION && !bNoSense) {
 			INT nLBA = 0;
 			if (swb.Sptd.Cdb[0] == 0x28 || swb.Sptd.Cdb[0] == 0xa8 || swb.Sptd.Cdb[0] == 0xad ||
@@ -613,7 +608,7 @@ BOOL ScsiPassThroughDirect(
 					, nLBA, nLBA, pszFuncName, lLineNum, swb.Sptd.Cdb[0]);
 				OutputScsiStatus(swb.Sptd.ScsiStatus);
 			}
-#elif __linux__
+#elif defined(__linux__)
 		if (swb.io_hdr.status >= SCSISTAT_CHECK_CONDITION && !bNoSense) {
 			INT nLBA = 0;
 			if (swb.io_hdr.cmdp[0] == 0xa8 || swb.io_hdr.cmdp[0] == 0xad ||
@@ -627,7 +622,7 @@ BOOL ScsiPassThroughDirect(
 					, nLBA, (UINT)nLBA, pszFuncName, lLineNum, swb.io_hdr.cmdp[0]);
 				OutputScsiStatus(swb.io_hdr.status);
 			}
-#elif __MACH__
+#elif defined(__APPLE__) && defined(__MACH__)
 		if (swb.taskStatus >= SCSISTAT_CHECK_CONDITION && !bNoSense) {
 #endif
 			if (bOutputMsg) {
@@ -645,11 +640,11 @@ BOOL ScsiPassThroughDirect(
 		*byScsiStatus = SCSISTAT_GOOD;
 	}
 	else {
-#ifdef _WIN32
+#if defined(_WIN32)
 		*byScsiStatus = swb.Sptd.ScsiStatus;
-#elif __linux__
+#elif defined(__linux__)
 		*byScsiStatus = swb.io_hdr.status;
-#elif __MACH__
+#elif defined(__APPLE__) && defined(__MACH__)
 		*byScsiStatus = swb.taskStatus;
 		FreeAndNull(range);
 #endif
@@ -704,65 +699,4 @@ BOOL StorageQueryProperty(
 	FreeAndNull(adapterDescriptor);
 	return bRet;
 }
-#if 0
-BOOL SetStreaming(
-	PDEVICE pDevice,
-	DWORD dwDiscSpeedNum
-) {
-#if 1
-	_declspec(align(4)) CDROM_SET_STREAMING setstreaming;
-#endif
-#if 0
-	CDB::_SET_STREAMING cdb = {};
-	cdb.OperationCode = SCSIOP_SET_STREAMING;
-	_declspec(align(4)) PERFORMANCE_DESCRIPTOR pd = {};
-	//	CHAR pd[28] = {};
-	size_t size = sizeof(PERFORMANCE_DESCRIPTOR);
-	REVERSE_BYTES_SHORT(&cdb.ParameterListLength, &size);
-#endif
-#if 1
-	setstreaming.RequestType = CdromSetStreaming;
-	if (0 < dwDiscSpeedNum && dwDiscSpeedNum <= DVD_DRIVE_MAX_SPEED) {
-		setstreaming.ReadSize = 1385 * dwDiscSpeedNum;
-	}
-	else {
-		setstreaming.ReadSize = 1385 * DVD_DRIVE_MAX_SPEED;
-	}
-	setstreaming.ReadTime = 1000;
-	setstreaming.WriteSize = setstreaming.ReadSize;
-	setstreaming.WriteTime = setstreaming.ReadTime;
-	setstreaming.EndLba = 0xffffffff;
-	setstreaming.RestoreDefaults = TRUE;
-#endif
-#if 0
-	pd.RestoreDefaults = TRUE;
-	pd.Exact = TRUE;
-	INT nENDLba = 0x231260;
-	REVERSE_BYTES(&pd.EndLba, &nENDLba);
-	DWORD dwReadSize = 0;
-	if (0 < dwDiscSpeedNum && dwDiscSpeedNum <= DVD_DRIVE_MAX_SPEED) {
-		dwReadSize = 1385 * dwDiscSpeedNum;
-	}
-	else {
-		//		dwReadSize = 1385;
-	}
-	REVERSE_BYTES(&pd.ReadSize, &dwReadSize);
-	DWORD dwReadTime = 1000;
-	REVERSE_BYTES(&pd.ReadTime, &dwReadTime);
-	dwReadSize = 1385;
-	REVERSE_BYTES(&pd.WriteSize, &dwReadSize);
-	REVERSE_BYTES(&pd.WriteTime, &dwReadTime);
-#endif
-	DWORD dwReturned = 0;
-	if (!DeviceIoControl(pDevice->hDevice, IOCTL_CDROM_SET_SPEED
-		, &setstreaming, sizeof(setstreaming), NULL, 0, &dwReturned, NULL)) {
-		OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
-		return FALSE;
-	}
-	else {
-		OutputString("Set the drive speed: %luKB/sec\n"), setstreaming.ReadSize);
-		OutputString("dwReturned: %lu\n"), dwReturned);
-	}
-	return TRUE;
-}
-#endif
+

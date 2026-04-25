@@ -1,5 +1,5 @@
 /**
- * Copyright 2011-2025 sarami
+ * Copyright 2011-2026 sarami
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -99,3 +99,19 @@ BOOL ReadGDForCheckingSubQAdr(
 	PDISC pDisc,
 	PDISC_PER_SECTOR pDiscPerSector
 );
+
+#ifdef _WIN32
+typedef PSP_FILE_CALLBACK MY_PSP_FILE_CALLBACK;
+#else
+typedef unsigned int (*MY_PSP_FILE_CALLBACK)(
+    void* Context,
+    unsigned int Notification,
+    uintptr_t Param1,
+    uintptr_t Param2
+    );
+int MySetupIterateCabinetA(
+	const char* cabinetFile,
+	MY_PSP_FILE_CALLBACK callback,
+	void* context
+);
+#endif

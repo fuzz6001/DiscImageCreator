@@ -1,5 +1,5 @@
 /**
- * Copyright 2011-2025 sarami
+ * Copyright 2011-2026 sarami
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,9 @@
 #include "outputScsiCmdLogforDVD.h"
 #include "set.h"
 #include "_external/CheckSector.h"
+#ifndef _WIN32
+#include "_linux/defineForLinux.h"
+#endif
 
 #ifdef _DEBUG
 _TCHAR logBuffer[DISC_MAIN_DATA_SIZE];
@@ -89,6 +92,17 @@ FILE* CreateOrOpenFile(
 		_tcsncpy(pszOutPath, szDstPath, _MAX_PATH);
 	}
 	FILE* fp = _tfopen(szDstPath, pszMode);
+#ifndef _WIN32
+	if (geteuid() == 0) {
+		uid_t uid; gid_t gid;
+		if (parse_uid_gid_from_sudo(&uid, &gid)) {
+			if (fchown(fileno(fp), uid, gid) != 0) {
+				OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+			}
+		}
+	}
+#endif
+	
 #ifdef UNICODE
 	// delete bom
 	fseek(fp, 0, SEEK_SET);
@@ -123,6 +137,16 @@ FILE* OpenProgrammabledFile(
 #endif
 		szFullPathName[_MAX_PATH + _MAX_FNAME - 1] = 0;
 		fp = _tfopen(szFullPathName, pszMode);
+#ifndef _WIN32
+		if (geteuid() == 0) {
+			uid_t uid; gid_t gid;
+			if (parse_uid_gid_from_sudo(&uid, &gid)) {
+				if (fchown(fileno(fp), uid, gid) != 0) {
+					OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+				}
+			}
+		}
+#endif
 	}
 	return fp;
 }
@@ -697,8 +721,12 @@ VOID WriteSubChannel(
 	PDISC_PER_SECTOR pDiscPerSector,
 	LPBYTE lpSubcodeRaw,
 	INT nLBA,
-	FILE* fpSub
+	FILE* fpSub,
+	FILE* fpSubInterleave
 ) {
+	if (fpSubInterleave) {
+		fwrite(lpSubcodeRaw, sizeof(BYTE), CD_RAW_READ_SUBCODE_SIZE, fpSubInterleave);
+	}
 	if (fpSub) {
 		fwrite(pDiscPerSector->subcode.current, sizeof(BYTE), CD_RAW_READ_SUBCODE_SIZE, fpSub);
 		OutputCDSubToLog(pDisc, pDiscPerSector, lpSubcodeRaw, nLBA);
@@ -718,6 +746,7 @@ VOID WriteErrorBuffer(
 	INT nPadType,
 	FILE* fpImg,
 	FILE* fpSub,
+	FILE* fpSubInterleave,
 	FILE* fpC2
 ) {
 	UINT uiSize = 0;
@@ -832,7 +861,7 @@ VOID WriteErrorBuffer(
 		pDiscPerSector->subch.current.nAbsoluteTime++;
 		SetBufferFromTmpSubch(pDiscPerSector->subcode.current, pDiscPerSector->subch.current, TRUE, TRUE);
 		AlignColumnSubcode(lpSubcodeRaw, pDiscPerSector->subcode.current);
-		WriteSubChannel(pDisc, pDiscPerSector, lpSubcodeRaw, nLBA, fpSub);
+		WriteSubChannel(pDisc, pDiscPerSector, lpSubcodeRaw, nLBA, fpSub, fpSubInterleave);
 
 		if ((pExtArg->byC2 || pExtArg->byC2New) && pDevice->FEATURE.byC2ErrorData) {
 			fwrite(pDiscPerSector->data.current + pDevice->TRANSFER.uiBufC2Offset
@@ -1936,9 +1965,6 @@ VOID DescrambleMainChannelAll(
 			}
 			for (; n1stLBA <= nLastLBA; n1stLBA++, lSeekPtr++) {
 				fseek(fpImg, lSeekPtr * CD_RAW_SECTOR_SIZE, SEEK_SET);
-				if (feof(fpImg)) {
-					break;
-				}
 				if (fread(aSrcBuf, sizeof(BYTE), sizeof(aSrcBuf), fpImg) < sizeof(aSrcBuf)) {
 					OutputErrorString("LBA[%06d, %#07x]: Failed to read [F:%s][L:%d]\n"
 						, n1stLBA, (UINT)n1stLBA, _T(__FUNCTION__), __LINE__);
@@ -2146,6 +2172,69 @@ BOOL ProcessCreatingBin(
 	FcloseAndNull(fpBinIdxDesync);
 	FcloseAndNull(fpBin);
 	FcloseAndNull(fpImg);
+	return bRet;
+}
+
+BOOL CreateBinWithCdg(
+	PDISC pDisc,
+	LPCTSTR pszFullPath
+) {
+	BOOL bRet = TRUE;
+	FILE* fpBin = NULL;
+	FILE* fpCdg = NULL;
+	FILE* fpSub = NULL;
+	BYTE bufCdg[CD_RAW_SECTOR_SIZE + CD_RAW_READ_SUBCODE_SIZE] = {};
+
+	if (NULL == (fpSub = CreateOrOpenFile(
+		pszFullPath, _T("_interleave"), NULL, NULL, NULL, _T(".sub"), _T("rb"), 0, 0))) {
+		OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+		return FALSE;
+	}
+	for (BYTE i = pDisc->SCSI.toc.FirstTrack; i <= pDisc->SCSI.toc.LastTrack; i++) {
+		if (pDisc->SUB.lpRtoWList[i - 1] == SUB_RTOW_TYPE::CDG) {
+			OutputString(
+				"\rCreating bin with cdg (Track) %2u/%2u", i, pDisc->SCSI.toc.LastTrack);
+
+			if (NULL == (fpBin = CreateOrOpenFile(pszFullPath, NULL, NULL, NULL,
+				NULL, _T(".bin"), _T("rb"), i, pDisc->SCSI.toc.LastTrack))) {
+				OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+				bRet = FALSE;
+				break;
+			}
+			if (NULL == (fpCdg = CreateOrOpenFile(pszFullPath, _T("_with cdg"), NULL, NULL,
+				NULL, _T(".bin"), _T("wb"), i, pDisc->SCSI.toc.LastTrack))) {
+				OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+				bRet = FALSE;
+				break;
+			}
+			while (1) {
+				if (fread(bufCdg, sizeof(BYTE), CD_RAW_SECTOR_SIZE, fpBin) < CD_RAW_SECTOR_SIZE) {
+					if (feof(fpBin)) {
+						break;
+					}
+					OutputErrorString("Failed to read bin: [F:%s][L:%d]\n", _T(__FUNCTION__), __LINE__);
+					bRet = FALSE;
+					break;
+				}
+				if (fread(bufCdg + CD_RAW_SECTOR_SIZE, sizeof(BYTE), CD_RAW_READ_SUBCODE_SIZE, fpSub) < CD_RAW_READ_SUBCODE_SIZE) {
+					if (feof(fpSub)) {
+						break;
+					}
+					OutputErrorString("Failed to read sub: [F:%s][L:%d]\n", _T(__FUNCTION__), __LINE__);
+					bRet = FALSE;
+					break;
+				}
+				for (INT j = 0; j < CD_RAW_READ_SUBCODE_SIZE; j++) {
+					bufCdg[CD_RAW_SECTOR_SIZE + j] &= 0x3f;
+				}
+				fwrite(bufCdg, sizeof(BYTE), sizeof(bufCdg), fpCdg);
+			}
+			FcloseAndNull(fpBin);
+			FcloseAndNull(fpCdg);
+		}
+	}
+	OutputString("\n");
+	FcloseAndNull(fpSub);
 	return bRet;
 }
 
@@ -2936,9 +3025,8 @@ BOOL OutputMergedFile(
 		return FALSE;
 	}
 	BYTE buf[CD_RAW_SECTOR_SIZE] = {};
-	size_t readsize = fread(buf, sizeof(BYTE), sizeof(buf), fpSrc2);
-	if (readsize < sizeof(buf)) {
-		OutputErrorString("Failed to read: read size %zu [F:%s][L:%d]\n", readsize, _T(__FUNCTION__), __LINE__);
+	if (fread(buf, sizeof(BYTE), sizeof(buf), fpSrc2) < sizeof(buf)) {
+		OutputErrorString("Failed to read: [F:%s][L:%d]\n", _T(__FUNCTION__), __LINE__);
 		FcloseAndNull(fpSrc1);
 		FcloseAndNull(fpSrc2);
 		FcloseAndNull(fpDst);
@@ -2948,16 +3036,8 @@ BOOL OutputMergedFile(
 	rewind(fpSrc2);
 
 	for (INT i = 0; i < nLBA; i++) {
-		readsize = fread(buf, sizeof(BYTE), sizeof(buf), fpSrc1);
-		if (feof(fpSrc1)) {
-			break;
-		}
-		if (ferror(fpSrc1)) {
-			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
-			break;
-		}
-		if (readsize < sizeof(buf)) {
-			OutputErrorString("Failed to read: read size %zu [F:%s][L:%d]\n", readsize, _T(__FUNCTION__), __LINE__);
+		if (fread(buf, sizeof(BYTE), sizeof(buf), fpSrc1) < sizeof(buf)) {
+			OutputErrorString("Failed to read: [F:%s][L:%d]\n", _T(__FUNCTION__), __LINE__);
 			FcloseAndNull(fpSrc1);
 			FcloseAndNull(fpSrc2);
 			FcloseAndNull(fpDst);
@@ -2966,16 +3046,11 @@ BOOL OutputMergedFile(
 		fwrite(buf, sizeof(BYTE), sizeof(buf), fpDst);
 	}
 	while (1) {
-		readsize = fread(buf, sizeof(BYTE), sizeof(buf), fpSrc2);
-		if (feof(fpSrc2)) {
-			break;
-		}
-		if (ferror(fpSrc2)) {
-			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
-			break;
-		}
-		if (readsize < sizeof(buf)) {
-			OutputErrorString("Failed to read: read size %zu [F:%s][L:%d]\n", readsize, _T(__FUNCTION__), __LINE__);
+		if (fread(buf, sizeof(BYTE), sizeof(buf), fpSrc2) < sizeof(buf)) {
+			if (feof(fpSrc2)) {
+				break;
+			}
+			OutputErrorString("Failed to read: [F:%s][L:%d]\n", _T(__FUNCTION__), __LINE__);
 			FcloseAndNull(fpSrc1);
 			FcloseAndNull(fpSrc2);
 			FcloseAndNull(fpDst);
@@ -2985,16 +3060,11 @@ BOOL OutputMergedFile(
 		fseek(fpSrc1, sizeof(buf), SEEK_CUR);
 	}
 	while (1) {
-		readsize = fread(buf, sizeof(BYTE), sizeof(buf), fpSrc1);
-		if (feof(fpSrc1)) {
-			break;
-		}
-		if (ferror(fpSrc1)) {
-			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
-			break;
-		}
-		if (readsize < sizeof(buf)) {
-			OutputErrorString("Failed to read: read size %zu [F:%s][L:%d]\n", readsize, _T(__FUNCTION__), __LINE__);
+		if (fread(buf, sizeof(BYTE), sizeof(buf), fpSrc1) < sizeof(buf)) {
+			if (feof(fpSrc1)) {
+				break;
+			}
+			OutputErrorString("Failed to read: [F:%s][L:%d]\n", _T(__FUNCTION__), __LINE__);
 			FcloseAndNull(fpSrc1);
 			FcloseAndNull(fpSrc2);
 			FcloseAndNull(fpDst);
@@ -3071,14 +3141,12 @@ BOOL ConcatenateFile(
 ) {
 	BYTE buf[CD_RAW_SECTOR_SIZE] = {};
 	do {
-		if ((fread(buf, sizeof(BYTE), sizeof(buf), fpIn)) < sizeof(buf)) {
+		if (fread(buf, sizeof(BYTE), sizeof(buf), fpIn) < sizeof(buf)) {
 			if (feof(fpIn)) {
 				break;
 			}
-			if (ferror(fpIn)) {
-				OutputErrorString("Failed to read: read size %zu [F:%s][L:%ld]\n", sizeof(buf), func, line);
-				return FALSE;
-			}
+			OutputErrorString("Failed to read: read size %zu [F:%s][L:%ld]\n", sizeof(buf), func, line);
+			return FALSE;
 		};
 		fwrite(buf, sizeof(BYTE), sizeof(buf), fpImgFull);
 	} while (1);

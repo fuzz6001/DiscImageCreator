@@ -16,6 +16,12 @@
     <Filter Include="_external\mbedtls">
       <UniqueIdentifier>{a56d4b2c-fbc8-46d2-a34d-80dbb8b08f8e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="_external\libunshield">
+      <UniqueIdentifier>{cdb34b75-8013-41fc-895d-56b0596ba5a6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="_external\ps3auth">
+      <UniqueIdentifier>{c9943432-0ef3-472e-a76a-b7301d0fda70}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="calcHash.cpp">
@@ -27,10 +33,10 @@
     <ClCompile Include="convert.cpp">
       <Filter>source</Filter>
     </ClCompile>
-    <ClCompile Include="_external\crc16ccitt.cpp">
+    <ClCompile Include="_external\crc16ccitt.c">
       <Filter>_external</Filter>
     </ClCompile>
-    <ClCompile Include="_external\crc32.cpp">
+    <ClCompile Include="_external\crc32.c">
       <Filter>_external</Filter>
     </ClCompile>
     <ClCompile Include="DiscImageCreator.cpp">
@@ -72,7 +78,7 @@
     <ClCompile Include="_external\prngcd.cpp">
       <Filter>_external</Filter>
     </ClCompile>
-    <ClCompile Include="_external\sha1.cpp">
+    <ClCompile Include="_external\sha1.c">
       <Filter>_external</Filter>
     </ClCompile>
     <ClCompile Include="set.cpp">
@@ -93,25 +99,25 @@
     <ClCompile Include="_linux\defineForLinux.cpp">
       <Filter>_linux</Filter>
     </ClCompile>
-    <ClCompile Include="_external\md5c.cpp">
+    <ClCompile Include="_external\md5c.c">
       <Filter>_external</Filter>
     </ClCompile>
-    <ClCompile Include="_external\abgx360.cpp">
+    <ClCompile Include="_external\abgx360.c">
       <Filter>_external</Filter>
     </ClCompile>
-    <ClCompile Include="_external\rijndael-alg-fst.cpp">
+    <ClCompile Include="_external\rijndael-alg-fst.c">
       <Filter>_external</Filter>
     </ClCompile>
     <ClCompile Include="_external\tinyxml2.cpp">
       <Filter>_external</Filter>
     </ClCompile>
-    <ClCompile Include="_external\aes.cpp">
+    <ClCompile Include="_external\aes.c">
       <Filter>_external</Filter>
     </ClCompile>
-    <ClCompile Include="_external\platform_util.cpp">
+    <ClCompile Include="_external\platform_util.c">
       <Filter>_external</Filter>
     </ClCompile>
-    <ClCompile Include="_external\aesni.cpp">
+    <ClCompile Include="_external\aesni.c">
       <Filter>_external</Filter>
     </ClCompile>
     <ClCompile Include="outputFileSystem.cpp">
@@ -123,17 +129,71 @@
     <ClCompile Include="execTapeCmd.cpp">
       <Filter>source</Filter>
     </ClCompile>
-    <ClCompile Include="_external\sha224-256.cpp">
+    <ClCompile Include="_external\sha224-256.c">
       <Filter>_external</Filter>
     </ClCompile>
-    <ClCompile Include="_external\sha384-512.cpp">
+    <ClCompile Include="_external\sha384-512.c">
       <Filter>_external</Filter>
     </ClCompile>
-    <ClCompile Include="_external\xxhash.cpp">
+    <ClCompile Include="_external\xxhash.c">
       <Filter>_external</Filter>
     </ClCompile>
     <ClCompile Include="_external\ECCEDC.cpp">
       <Filter>_external</Filter>
+    </ClCompile>
+    <ClCompile Include="_external\reedSolomonGF64.cpp">
+      <Filter>_external</Filter>
+    </ClCompile>
+    <ClCompile Include="_external\libunshield\libunshield.c">
+      <Filter>_external\libunshield</Filter>
+    </ClCompile>
+    <ClCompile Include="_external\libunshield\component.c">
+      <Filter>_external\libunshield</Filter>
+    </ClCompile>
+    <ClCompile Include="_external\libunshield\helper.c">
+      <Filter>_external\libunshield</Filter>
+    </ClCompile>
+    <ClCompile Include="_external\libunshield\log.c">
+      <Filter>_external\libunshield</Filter>
+    </ClCompile>
+    <ClCompile Include="_external\libunshield\converter.c">
+      <Filter>_external\libunshield</Filter>
+    </ClCompile>
+    <ClCompile Include="_external\libunshield\file_group.c">
+      <Filter>_external\libunshield</Filter>
+    </ClCompile>
+    <ClCompile Include="_external\libunshield\libunshield.c">
+      <Filter>_external\libunshield</Filter>
+    </ClCompile>
+    <ClCompile Include="_external\libunshield\directory.c">
+      <Filter>_external\libunshield</Filter>
+    </ClCompile>
+    <ClCompile Include="_external\libunshield\file.c">
+      <Filter>_external\libunshield</Filter>
+    </ClCompile>
+    <ClCompile Include="_external\ps3auth\auth_service.c">
+      <Filter>_external\ps3auth</Filter>
+    </ClCompile>
+    <ClCompile Include="_external\ps3auth\crypto_backend_openssl.c">
+      <Filter>_external\ps3auth</Filter>
+    </ClCompile>
+    <ClCompile Include="_external\ps3auth\data_unwrap.c">
+      <Filter>_external\ps3auth</Filter>
+    </ClCompile>
+    <ClCompile Include="_external\ps3auth\drive_proto.c">
+      <Filter>_external\ps3auth</Filter>
+    </ClCompile>
+    <ClCompile Include="_external\ps3auth\drive_transport_execscsi.cpp">
+      <Filter>_external\ps3auth</Filter>
+    </ClCompile>
+    <ClCompile Include="_external\ps3auth\odd_ctx.c">
+      <Filter>_external\ps3auth</Filter>
+    </ClCompile>
+    <ClCompile Include="_external\ps3auth\session_keys.c">
+      <Filter>_external\ps3auth</Filter>
+    </ClCompile>
+    <ClCompile Include="_external\ps3auth\odd_tables.c">
+      <Filter>_external\ps3auth</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -266,9 +326,6 @@
     <ClInclude Include="_external\mbedtls\threading.h">
       <Filter>_external\mbedtls</Filter>
     </ClInclude>
-    <ClInclude Include="buildDateTime.h">
-      <Filter>header</Filter>
-    </ClInclude>
     <ClInclude Include="outputFileSystem.h">
       <Filter>header</Filter>
     </ClInclude>
@@ -289,6 +346,57 @@
     </ClInclude>
     <ClInclude Include="_external\CheckSector.h">
       <Filter>_external</Filter>
+    </ClInclude>
+    <ClInclude Include="_external\reedSolomonGF64.h">
+      <Filter>_external</Filter>
+    </ClInclude>
+    <ClInclude Include="_external\libunshield\cabfile.h">
+      <Filter>_external\libunshield</Filter>
+    </ClInclude>
+    <ClInclude Include="_external\libunshield\internal.h">
+      <Filter>_external\libunshield</Filter>
+    </ClInclude>
+    <ClInclude Include="_external\libunshield\libunshield.h">
+      <Filter>_external\libunshield</Filter>
+    </ClInclude>
+    <ClInclude Include="_external\libunshield\log.h">
+      <Filter>_external\libunshield</Filter>
+    </ClInclude>
+    <ClInclude Include="_external\libunshield\unshield_config.h">
+      <Filter>_external\libunshield</Filter>
+    </ClInclude>
+    <ClInclude Include="_external\libunshield\converter.h">
+      <Filter>_external\libunshield</Filter>
+    </ClInclude>
+    <ClInclude Include="_external\libunshield\dirent.h">
+      <Filter>_external\libunshield</Filter>
+    </ClInclude>
+    <ClInclude Include="_external\ps3auth\auth_service.h">
+      <Filter>_external\ps3auth</Filter>
+    </ClInclude>
+    <ClInclude Include="_external\ps3auth\crypto_backend.h">
+      <Filter>_external\ps3auth</Filter>
+    </ClInclude>
+    <ClInclude Include="_external\ps3auth\data_unwrap.h">
+      <Filter>_external\ps3auth</Filter>
+    </ClInclude>
+    <ClInclude Include="_external\ps3auth\drive_proto.h">
+      <Filter>_external\ps3auth</Filter>
+    </ClInclude>
+    <ClInclude Include="_external\ps3auth\drive_transport.h">
+      <Filter>_external\ps3auth</Filter>
+    </ClInclude>
+    <ClInclude Include="_external\ps3auth\odd_ctx.h">
+      <Filter>_external\ps3auth</Filter>
+    </ClInclude>
+    <ClInclude Include="_external\ps3auth\session_keys.h">
+      <Filter>_external\ps3auth</Filter>
+    </ClInclude>
+    <ClInclude Include="_external\ps3auth\session_keys_internal.h">
+      <Filter>_external\ps3auth</Filter>
+    </ClInclude>
+    <ClInclude Include="_external\ps3auth\odd_tables.h">
+      <Filter>_external\ps3auth</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -1,4 +1,19 @@
 ================================= Change Log ==================================
+*2026-01-01
+- added generate _interleave.sub
+- added generate _with cdg.bin when /be pack is used
+- added correcting the subchannel R..W using parity Q and P
+- added extract cab file for linux/macOS using libarchive
+- added support PS3 drive for PS3 disc
+- fixed speed setting for BD (use SET_STREAMING not SET_CD_SPEED)
+- fixed scsi direction for some command
+
+*2025-09-01
+- fixed timestamp in directory record
+- fixed sacd log
+- fixed misdetecting that non-zero data is sync bytes
+- fixed MCN sector ranges
+
 *2025-05-01
 - added /fdesc option to descramble sync/edc/ecc error sector
 - added /c2new option to recover the sector using c2 error bit

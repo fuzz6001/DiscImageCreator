@@ -66,9 +66,14 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ProjectPublicIncludePath>
     </ProjectPublicIncludePath>
-    <IncludePath>
-    </IncludePath>
+    <IncludePath>$(MSBuildProjectDirectory);$(MSBuildProjectDirectory)\_external;$(IncludePath)</IncludePath>
     <TargetName>DiscImageCreator</TargetName>
+    <LibraryPath>
+    </LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <TargetName>DiscImageCreator</TargetName>
+    <IncludePath>$(MSBuildProjectDirectory);$(MSBuildProjectDirectory)\_external;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemGroup>
     <ClCompile Include="calcHash.cpp" />
@@ -96,26 +101,187 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="_external\abgx360.cpp" />
-    <ClCompile Include="_external\aes.cpp" />
-    <ClCompile Include="_external\aesni.cpp" />
-    <ClCompile Include="_external\crc16ccitt.cpp" />
-    <ClCompile Include="_external\crc32.cpp" />
+    <ClCompile Include="_external\abgx360.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\aes.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\aesni.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\crc16ccitt.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\crc32.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="_external\ECCEDC.cpp" />
-    <ClCompile Include="_external\md5c.cpp" />
+    <ClCompile Include="_external\libunshield\component.c">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">CompileAsC</CompileAs>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\libunshield\converter.c">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">CompileAsC</CompileAs>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\libunshield\directory.c">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">CompileAsC</CompileAs>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\libunshield\file.c">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">CompileAsC</CompileAs>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\libunshield\file_group.c">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">CompileAsC</CompileAs>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\libunshield\helper.c">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">CompileAsC</CompileAs>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\libunshield\libunshield.c">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">CompileAsC</CompileAs>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\libunshield\log.c">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">CompileAsC</CompileAs>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\md5c.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="_external\NonStandardFunction.cpp" />
-    <ClCompile Include="_external\platform_util.cpp" />
+    <ClCompile Include="_external\platform_util.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="_external\prngcd.cpp" />
-    <ClCompile Include="_external\rijndael-alg-fst.cpp" />
-    <ClCompile Include="_external\sha1.cpp" />
-    <ClCompile Include="_external\sha224-256.cpp" />
-    <ClCompile Include="_external\sha384-512.cpp" />
+    <ClCompile Include="_external\ps3auth\auth_service.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\ps3auth\crypto_backend_openssl.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\ps3auth\data_unwrap.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\ps3auth\drive_proto.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\ps3auth\drive_transport_execscsi.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)_linux/defineForLinux.h</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\ps3auth\odd_ctx.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\ps3auth\odd_tables.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\ps3auth\session_keys.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\reedSolomonGF64.cpp" />
+    <ClCompile Include="_external\rijndael-alg-fst.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\sha1.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\sha224-256.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="_external\sha384-512.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="_external\tinyxml2.cpp" />
-    <ClCompile Include="_external\xxhash.cpp" />
+    <ClCompile Include="_external\xxhash.c">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="_linux\defineForLinux.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="buildDateTime.h" />
     <ClInclude Include="calcHash.h" />
     <ClInclude Include="check.h" />
     <ClInclude Include="convert.h" />
@@ -148,6 +314,13 @@
     <ClInclude Include="_external\crc16ccitt.h" />
     <ClInclude Include="_external\crc32.h" />
     <ClInclude Include="_external\global.h" />
+    <ClInclude Include="_external\libunshield\cabfile.h" />
+    <ClInclude Include="_external\libunshield\converter.h" />
+    <ClInclude Include="_external\libunshield\dirent.h" />
+    <ClInclude Include="_external\libunshield\internal.h" />
+    <ClInclude Include="_external\libunshield\libunshield.h" />
+    <ClInclude Include="_external\libunshield\log.h" />
+    <ClInclude Include="_external\libunshield\unshield_config.h" />
     <ClInclude Include="_external\mbedtls\aes.h" />
     <ClInclude Include="_external\mbedtls\aesni.h" />
     <ClInclude Include="_external\mbedtls\check_config.h" />
@@ -160,6 +333,16 @@
     <ClInclude Include="_external\md5.h" />
     <ClInclude Include="_external\NonStandardFunction.h" />
     <ClInclude Include="_external\prngcd.h" />
+    <ClInclude Include="_external\ps3auth\auth_service.h" />
+    <ClInclude Include="_external\ps3auth\crypto_backend.h" />
+    <ClInclude Include="_external\ps3auth\data_unwrap.h" />
+    <ClInclude Include="_external\ps3auth\drive_proto.h" />
+    <ClInclude Include="_external\ps3auth\drive_transport.h" />
+    <ClInclude Include="_external\ps3auth\odd_ctx.h" />
+    <ClInclude Include="_external\ps3auth\odd_tables.h" />
+    <ClInclude Include="_external\ps3auth\session_keys.h" />
+    <ClInclude Include="_external\ps3auth\session_keys_internal.h" />
+    <ClInclude Include="_external\reedSolomonGF64.h" />
     <ClInclude Include="_external\rijndael-alg-fst.h" />
     <ClInclude Include="_external\sha-private.h" />
     <ClInclude Include="_external\sha.h" />
@@ -174,7 +357,7 @@
     <ClCompile>
       <ForcedIncludeFiles>$(ProjectDir)_linux/defineForLinux.h</ForcedIncludeFiles>
       <CAdditionalWarning>extra;no-unknown-pragmas;%(CAdditionalWarning)</CAdditionalWarning>
-      <CppAdditionalWarning>extra;no-unknown-pragmas;aggregate-return;cast-align;cast-qual;conditionally-supported;disabled-optimization;double-promotion;float-equal;format=2;format-signedness;init-self;inline;invalid-pch;logical-op;missing-include-dirs;multichar;noexcept;overlength-strings;packed;pointer-arith;redundant-decls;shadow;stack-protector;strict-aliasing=2;strict-null-sentinel;switch-default;switch-enum;trampolines;variadic-macros;vector-operation-performance;write-strings;unused-macros;%(CppAdditionalWarning)</CppAdditionalWarning>
+      <CppAdditionalWarning>extra;no-unknown-pragmas;cast-align;cast-qual;conditionally-supported;disabled-optimization;double-promotion;float-equal;format=2;format-signedness;init-self;inline;invalid-pch;logical-op;missing-include-dirs;multichar;noexcept;overlength-strings;packed;pointer-arith;redundant-decls;shadow;stack-protector;strict-aliasing=2;strict-null-sentinel;switch-default;switch-enum;trampolines;variadic-macros;vector-operation-performance;write-strings;unused-macros;%(CppAdditionalWarning)</CppAdditionalWarning>
       <Optimization>MaxSpeed</Optimization>
       <DebugInformationFormat>None</DebugInformationFormat>
     </ClCompile>
@@ -184,13 +367,25 @@
     <PreBuildEvent>
       <Message>CreateBuildDateTime.h</Message>
     </PreBuildEvent>
+    <Link>
+      <AdditionalDependencies>-larchive;-lz;-lcrypto;-lssl;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>/usr/lib/x86_64-linux-gnu;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <ForcedIncludeFiles>_linux/defineForLinux.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles>$(ProjectDir)_linux/defineForLinux.h</ForcedIncludeFiles>
       <CAdditionalWarning>no-unknown-pragmas;%(CAdditionalWarning)</CAdditionalWarning>
       <CppAdditionalWarning>no-unknown-pragmas;%(CppAdditionalWarning)</CppAdditionalWarning>
     </ClCompile>
+    <Link>
+      <AdditionalDependencies>-larchive;-lz;-lcrypto;-lssl;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>/usr/lib/x86_64-linux-gnu;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+    <PreBuildEvent>
+      <Command>CreateBuildDateTime.bat</Command>
+      <Message>CreateBuildDateTime.h</Message>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

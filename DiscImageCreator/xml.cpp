@@ -1,5 +1,5 @@
 /**
- * Copyright 2011-2025 sarami
+ * Copyright 2011-2026 sarami
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -204,8 +204,8 @@ BOOL OutputHash(
 		return FALSE;
 	}
 #else
-	size_t size = SIZE_OF_ARRAY(wszFnameAndExt));
-	wcsncpy(wszFnameAndExt, szFnameAndExt, size);
+	size_t size = SIZE_OF_ARRAY(wszFnameAndExt);
+	wcsncpy(wszFnameAndExt, pHash->szFnameAndExt, size);
 	wszFnameAndExt[size - 1] = 0;
 #endif
 	if (FAILED(hr = pWriter->WriteAttributeString(NULL, L"name", NULL, wszFnameAndExt))) {

@@ -1,5 +1,5 @@
 /**
- * Copyright 2011-2025 sarami
+ * Copyright 2011-2026 sarami
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ typedef enum _EXEC_TYPE {
 	xgd3swap,
 	bd,
 	sacd,
+	authps3,
 	fd,
 	disk,
 	tape,

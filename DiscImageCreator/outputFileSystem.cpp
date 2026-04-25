@@ -1,5 +1,5 @@
 /**
- * Copyright 2011-2025 sarami
+ * Copyright 2011-2026 sarami
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,40 +49,40 @@ VOID OutputFsDirectoryRecord(
 	CHAR str[128]{};
 	INT nFileFlag = lpBuf[25];
 	if (nFileFlag & 0x01) {
-		strncat(str, "Invisible, ", 11);
+		strncat(str, "Invisible, ", sizeof(str) - strlen(str) - 1);
 	}
 	else {
-		strncat(str, "Visible, ", 9);
+		strncat(str, "Visible, ", sizeof(str) - strlen(str) - 1);
 	}
 	if (nFileFlag & 0x02) {
-		strncat(str, "Directory, ", 11);
+		strncat(str, "Directory, ", sizeof(str) - strlen(str) - 1);
 	}
 	else {
-		strncat(str, "File, ", 6);
+		strncat(str, "File, ", sizeof(str) - strlen(str) - 1);
 	}
 	if (nFileFlag & 0x04) {
-		strncat(str, "Associated, ", 12);
+		strncat(str, "Associated, ", sizeof(str) - strlen(str) - 1);
 	}
 	else {
-		strncat(str, "No Associated, ", 15);
+		strncat(str, "No Associated, ", sizeof(str) - strlen(str) - 1);
 	}
 	if (nFileFlag & 0x08) {
-		strncat(str, "Record Format, ", 15);
+		strncat(str, "Record Format, ", sizeof(str) - strlen(str) - 1);
 	}
 	else {
-		strncat(str, "No Record Format, ", 18);
+		strncat(str, "No Record Format, ", sizeof(str) - strlen(str) - 1);
 	}
 	if (nFileFlag & 0x10) {
-		strncat(str, "Owner/Group ID, ", 16);
+		strncat(str, "Owner/Group ID, ", sizeof(str) - strlen(str) - 1);
 	}
 	else {
-		strncat(str, "No Owner/Group ID, ", 19);
+		strncat(str, "No Owner/Group ID, ", sizeof(str) - strlen(str) - 1);
 	}
 	if (nFileFlag & 0x80) {
-		strncat(str, "No Final Directory Record", 25);
+		strncat(str, "No Final Directory Record", sizeof(str) - strlen(str) - 1);
 	}
 	else {
-		strncat(str, "Final Directory Record", 22);
+		strncat(str, "Final Directory Record", sizeof(str) - strlen(str) - 1);
 	}
 	WORD vsn = GetSizeOrWordForVolDesc(lpBuf + 28);
 	OutputVolDescLog(
@@ -90,7 +90,7 @@ VOID OutputFsDirectoryRecord(
 		"\t\tExtended Attribute Record Length: %u\n"
 		"\t\t              Location of Extent: %u\n"
 		"\t\t                     Data Length: %u\n"
-		"\t\t         Recording Date and Time: %d-%02u-%02uT%02u:%02u:%02u%+03d:%02d\n"
+		"\t\t         Recording Date and Time: %d-%02u-%02uT%02u:%02u:%02u%c%02d:%02d\n"
 		"\t\t                      File Flags: %u (%" CHARWIDTH "s)\n"
 		"\t\t                  File Unit Size: %u\n"
 		"\t\t             Interleave Gap Size: %u\n"
@@ -98,7 +98,7 @@ VOID OutputFsDirectoryRecord(
 		"\t\t       Length of File Identifier: %u\n"
 		"\t\t                 File Identifier: "
 		, lpBuf[0], lpBuf[1], uiExtentPos, uiDataLen, lpBuf[18] + 1900, lpBuf[19], lpBuf[20]
-		, lpBuf[21], lpBuf[22], lpBuf[23], (CHAR)lpBuf[24] / 4, (CHAR)lpBuf[24] % 4 * 15
+		, lpBuf[21], lpBuf[22], lpBuf[23], (CHAR)lpBuf[24] < 0 ? '-' : '+', abs((CHAR)lpBuf[24]) / 4, abs((CHAR)lpBuf[24]) % 4 * 15
 		, lpBuf[25], str, lpBuf[26], lpBuf[27], vsn, lpBuf[32]);
 	BOOL bSkip = FALSE;
 	for (INT n = 0; n < lpBuf[32]; n++) {
@@ -118,9 +118,12 @@ VOID OutputFsDirectoryRecord(
 
 	CHAR strTmpFull[_MAX_PATH] = {};
 	// not upper and current directory
-	if (pPathTblRec &&
-		!(lpBuf[32] == 1 && fname[0] == 0) &&
-		!(lpBuf[32] == 1 && fname[0] == 1)) {
+	CONST UCHAR fileIdLen = (UCHAR)lpBuf[32];
+	CONST PUCHAR fileId = (CONST PUCHAR)&lpBuf[33];
+	CONST INT isDotOrDotDot =
+		(fileIdLen == 1 && (fileId[0] == 0x00 || fileId[0] == 0x01));
+
+	if (pPathTblRec && !isDotOrDotDot) {
 		LPCH pName[_MAX_FNAME] = {};
 		INT fullIdx = 0;
 		pName[fullIdx++] = fname;
@@ -547,6 +550,7 @@ BOOL OutputFsPathTableRecord(
 			else {
 				pPathTblRec[*uiDirPosNum].uiNumOfUpperDir = MAKEWORD(lpBuf[7 + i], lpBuf[6 + i]);
 			}
+			size_t dst = 0;
 			OutputVolDescLog(
 				"\t     Length of Directory Identifier: %u\n"
 				"\tLength of Extended Attribute Record: %u\n"
@@ -556,12 +560,10 @@ BOOL OutputFsPathTableRecord(
 				, pPathTblRec[*uiDirPosNum].uiDirNameLen, lpBuf[1 + i]
 				, pPathTblRec[*uiDirPosNum].uiPosOfDir, pPathTblRec[*uiDirPosNum].uiNumOfUpperDir);
 			for (size_t n = 0; n < pPathTblRec[*uiDirPosNum].uiDirNameLen; n++) {
-#ifndef _WIN32
-				if (lpBuf[8 + i + n] == 0) continue;
-#endif
 				OutputVolDescLog("%c", lpBuf[8 + i + n]);
-				pPathTblRec[*uiDirPosNum].szDirName[n] = (CHAR)lpBuf[8 + i + n];
+				pPathTblRec[*uiDirPosNum].szDirName[dst++] = (CHAR)lpBuf[8 + i + n];
 			}
+			pPathTblRec[*uiDirPosNum].szDirName[dst] = '\0';
 			OutputVolDescLog("\n\n");
 
 			i += 8 + pPathTblRec[*uiDirPosNum].uiDirNameLen;
@@ -1135,7 +1137,7 @@ VOID OutputFsPartitionMap(
 VOID GetMacTime(
 	LPBYTE lpBuf,
 	time_t* lpuiTime,
-	PCHAR lpBufTime,
+	_TCHAR* lpBufTime,
 	size_t lpBufTimeSize
 ) {
 	*lpuiTime = MAKEUINT(MAKEWORD(lpBuf[3], lpBuf[2]), MAKEWORD(lpBuf[1], lpBuf[0]));

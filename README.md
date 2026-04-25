@@ -217,6 +217,8 @@ See [wiki](https://github.com/saramibreak/DiscImageCreator/wiki)
     "Lead-out".  
   - (Subs desync) (Track xx).bin  
     Track is separated with priority given to the subchannel control flag and/or indexes.  
+  - _with cdg.bin  
+    2448 bytes/sector binary image of the CD+G. it can play by the [KaraFun Player](https://www.karafun.com/karaokeplayer/), [Karaoke Builder Player](https://www.karaokebuilder.com/kbplayer.php)
 - .c2  
   c2 error binary image of the CD. 1 bit expresses 1 byte.
 - .ccd  
@@ -224,7 +226,7 @@ See [wiki](https://github.com/saramibreak/DiscImageCreator/wiki)
 - .cue  
   CD information. Original is [CDRWIN](https://web.archive.org/web/20111008191852/http://www.goldenhawk.com/cdrwin.htm)
 - .dat  
-  crc32/md5/sha1 of the bin/iso/img/scm/raw file(s). Original is [Clrmamepro](http://mamedev.emulab.it/clrmamepro/)
+  crc32/md5/sha1 of the bin/iso/img/scm/raw file(s). Original is [Clrmamepro](https://mamedev.emulab.it/clrmamepro/)
 - .img  
   2352 bytes/sector binary image of the CD. This file is used to a ccd file.
   - (Track all).img  
@@ -236,7 +238,9 @@ See [wiki](https://github.com/saramibreak/DiscImageCreator/wiki)
 - .scm  
   2352 bytes/sector scrambled binary image of the img file.
 - .sub  
-  subchannel data of the CD. This file is used to a ccd file.
+  de-interleaved subchannel data of the CD. This file is used to a ccd file.
+- _interleave.sub  
+  interleaved subchannel data of the CD.
 - .toc  
   table of contents of the disc.
 - _CDZ.bin  
@@ -284,10 +288,10 @@ See [wiki](https://github.com/saramibreak/DiscImageCreator/wiki)
       https://docs.microsoft.com/en-us/windows/wsl/install-win10
 
 - Linux
-  - GCC, make
+  - zlib1g-dev, libarchive, libssl-dev
 
 - macOS
-  - Clang, make, MacOSX.sdk
+  - MacOSX.sdk, libarchive, openssl@3
 
 ## License & Copyright
 See LICENSE  
@@ -295,14 +299,18 @@ See LICENSE
   prngcd.cpp  
     Copyright (c) 2015 Jonathan Gevaryahu. All rights reserved.  
 
-  aes.cpp, aesni.cpp, platform_util.cpp, mbedtls folder  
+  aes.c, aesni.c, platform_util.c, mbedtls folder  
     https://github.com/ARMmbed/mbedtls  
     Apache License Version 2.0  
     Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
 
-  abgx360.cpp  
-    http://abgx360.cc/  
+  abgx360.c  
+    https://web.archive.org/web/20201123161416/http://abgx360.cc/  
     Copyright 2008-2012 by Seacrest <Seacrest[at]abgx360[dot]net>
+
+  libunshield  
+    https://github.com/twogood/unshield  
+    Unshield uses the MIT license.
 
   rijndael-alg-fst.cpp/h  
     Vincent Rijmen <vincent.rijmen@esat.kuleuven.ac.be>  

@@ -1,5 +1,5 @@
 /**
- * Copyright 2011-2018 sarami
+ * Copyright 2026 sarami@ChatGPT
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,5 +14,20 @@
  * limitations under the License.
  */
 #pragma once
+#include "odd_ctx.h"
+#include "crypto_backend.h"
+#include "drive_proto.h"
 
-void make_crc6itu_table(void);
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+int data_unwrap_finalize(
+    odd_ctx* ctx,
+    const crypto_backend* crypto,
+    proto_out* inout
+);
+
+#ifdef __cplusplus
+}
+#endif
