@@ -14,13 +14,6 @@
  * limitations under the License.
  */
 
- /* Please note, this file should be opened with Shift JIS encoding
- * due to the Japanese text in ReadCDForScanningPsxAntiMod().
- * This sample text is high up in this file to allow some editors
- * to autodetect encoding:
- * 		"強制終了しました。\n本体が改造されている\nおそれがあります。";
- */
-
 #include "struct.h"
 #include "calcHash.h"
 #include "check.h"
@@ -268,7 +261,7 @@ BOOL ExecSearchingOffset(
 	else {
 		if (*pExecType == swap || IsDataDisc(pDisc) ||
 			pDisc->SCSI.trkType & TRACK_TYPE::pregapAudioWithSyncIn1stTrack) {
-			// http://forum.redump.org/post/81925/#p81925
+			// https://forum.redump.info/viewtopic.php?p=25786#p25786
 			INT nSectorNum = 5;
 			LPBYTE pBuf2 = NULL;
 			LPBYTE lpBuf2 = NULL;
@@ -304,9 +297,9 @@ BOOL ExecSearchingOffset(
 				else {
 					if (pDisc->MAIN.nCombinedOffset > 0) {
 						INT nOverRead = pDisc->MAIN.nCombinedOffset / CD_RAW_SECTOR_SIZE;
-						// [FMT] Sangokushi IV http://forum.redump.org/post/82784/#p82784
-						// [FMT] Lip 3: Lipstick Adventure 3 http://forum.redump.org/post/80180/#p80180
-						// [FMT] Gulf War: Soukouden http://forum.redump.org/topic/16418/addedfmt-5-new-dumps/
+						// [FMT] Sangokushi IV https://forum.redump.info/viewtopic.php?p=25806#p25806
+						// [FMT] Lip 3: Lipstick Adventure 3 https://forum.redump.info/viewtopic.php?p=25750#p25750
+						// [FMT] Gulf War: Soukouden https://forum.redump.info/viewtopic.php?p=39470
 						if (nOverRead > 0) {
 							if (k == 0) {
 								SetAndOutputCDOffset(pExtArg, pDisc, bGetDriveOffset
@@ -2221,6 +2214,9 @@ BOOL ReadCDForCheckingExe(
 				}
 				int files = unshield_file_count(u);
 				for (int i = 0; i < files; i++) {
+					if (!unshield_file_is_valid(u, i)) {
+						continue;
+					}
 					const char* name = unshield_file_name(u, i);
 					const char* p = PathFindExtensionA(name);
 					if (!p || *p != '.' || p[1] == '\0') {
@@ -2428,7 +2424,7 @@ BOOL ReadCDForCheckingExe(
 				PIMAGE_DOS_HEADER pIDh = (PIMAGE_DOS_HEADER)&lpBuf[0];
 				if (dwSize < (DWORD)pIDh->e_lfanew) {
 					if (pDevice->dwMaxTransferLength < (DWORD)pIDh->e_lfanew) {
-						OutputVolDescLog("%" CHARWIDTH "s: offset is very big (%ld). read skip [TODO]\n"
+						OutputVolDescLog("%" CHARWIDTH "s: offset is very big (%d). read skip [TODO]\n"
 							, pDisc->PROTECT.pNameForExe[n], pIDh->e_lfanew);
 					}
 					else {
@@ -2787,10 +2783,33 @@ VOID ReadCDForScanningPsxAntiMod(
 ) {
 	BOOL bRet = FALSE;
 	BYTE buf[DISC_MAIN_DATA_SIZE * 2] = {};
-	CONST CHAR antiModStrEn[] =
-		"     SOFTWARE TERMINATED\nCONSOLE MAY HAVE BEEN MODIFIED\n     CALL 1-888-780-7690";
-	CONST CHAR antiModStrJp[] =
-		"強制終了しました。\n本体が改造されている\nおそれがあります。";
+
+	// The following string in ASCII:
+	//      SOFTWARE TERMINATED\nCONSOLE MAY HAVE BEEN MODIFIED\n     CALL 1-888-780-7690
+	CONST BYTE antiModStrEn[] = {
+		0x20, 0x20, 0x20, 0x20, 0x20, 0x53, 0x4F, 0x46,
+		0x54, 0x57, 0x41, 0x52, 0x45, 0x20, 0x54, 0x45,
+		0x52, 0x4D, 0x49, 0x4E, 0x41, 0x54, 0x45, 0x44,
+		0x5C, 0x6E, 0x43, 0x4F, 0x4E, 0x53, 0x4F, 0x4C,
+		0x45, 0x20, 0x4D, 0x41, 0x59, 0x20, 0x48, 0x41,
+		0x56, 0x45, 0x20, 0x42, 0x45, 0x45, 0x4E, 0x20,
+		0x4D, 0x4F, 0x44, 0x49, 0x46, 0x49, 0x45, 0x44,
+		0x5C, 0x6E, 0x20, 0x20, 0x20, 0x20, 0x20, 0x43,
+		0x41, 0x4C, 0x4C, 0x20, 0x31, 0x2D, 0x38, 0x38,
+		0x38, 0x2D, 0x37, 0x38, 0x30, 0x2D, 0x37, 0x36,
+		0x39, 0x30};
+
+	// The following string in Shift-JIS:
+	CONST BYTE antiModStrJp[] = {
+		0x8B, 0xAD, 0x90, 0xA7, 0x8F, 0x49, 0x97, 0xB9,
+		0x82, 0xB5, 0x82, 0xDC, 0x82, 0xB5, 0x82, 0xBD,
+		0x81, 0x42, 0x5C, 0x6E, 0x96, 0x7B, 0x91, 0xCC,
+		0x82, 0xAA, 0x89, 0xFC, 0x91, 0xA2, 0x82, 0xB3,
+		0x82, 0xEA, 0x82, 0xC4, 0x82, 0xA2, 0x82, 0xE9,
+		0x5C, 0x6E, 0x82, 0xA8, 0x82, 0xBB, 0x82, 0xEA,
+		0x82, 0xAA, 0x82, 0xA0, 0x82, 0xE8, 0x82, 0xDC,
+		0x82, 0xB7, 0x81, 0x42};
+
 	CDB::_READ12 cdb = {};
 	cdb.OperationCode = SCSIOP_READ12;
 	cdb.TransferLength[3] = 2;
@@ -2895,9 +2914,9 @@ BOOL ReadCDForCheckingSecuROM(
 
 		// All SecuROM titles http://redump.org/discs/quicksearch/securom/protection/only
 		if ((nRLBA == 3000 || nRLBA == 3001) && nALBA == 299) { // 3001(00:40:01), 299(00:03:74)
-			// Aliens Versus Predator 2 (Disc 1) http://redump.org/disc/35861/
-			// Unreal Tournament 2003 (Disc 1) (Play Disc) http://redump.org/disc/21469/
-			// Unreal Tournament 2004 (Play Disc) http://redump.org/disc/61749/
+			// Aliens Versus Predator 2 (Disc 1) https://redump.info/disc/35861/
+			// Unreal Tournament 2003 (Disc 1) (Play Disc) https://redump.info/disc/21469/
+			// Unreal Tournament 2004 (Play Disc) https://redump.info/disc/61749/
 			OutputSubInfoWithLBALog(
 				"Detected intentional error. CRC-16 is original:[%02x%02x] and XORed with 0x8001:[%02x%02x] "
 				, -1, 0, pDiscPerSector->subcode.current[22] ^ 0x80, pDiscPerSector->subcode.current[23] ^ 0x01
@@ -2920,13 +2939,13 @@ BOOL ReadCDForCheckingSecuROM(
 				, pDiscPerSector->subcode.current[19], pDiscPerSector->subcode.current[20], pDiscPerSector->subcode.current[21]);
 
 			if (nRLBA == 167295) {
-				// Colin McRae Rally 2.0 (Europe) http://redump.org/disc/31587/
+				// Colin McRae Rally 2.0 (Europe) https://redump.info/disc/31587/
 				OutputLog(standardOut | fileDisc, "Detected intentional subchannel in LBA -1 => SecuROM 3rd version type 1 (a.k.a. NEW)\n");
 				pDisc->PROTECT.byExist = securomV3_1;
 			}
 			else if (nRLBA == 0) {
-				// Empire Earth (USA) http://redump.org/disc/45559/
-				// Diablo II: Lord of Destruction (Expansion Set) (USA) http://redump.org/disc/58232/
+				// Empire Earth (USA) https://redump.info/disc/45559/
+				// Diablo II: Lord of Destruction (Expansion Set) (USA) https://redump.info/disc/58232/
 				OutputLog(standardOut | fileDisc, "Detected intentional subchannel in LBA -1 => SecuROM 3rd version type 2 (a.k.a. NEW)\n");
 				pDisc->PROTECT.byExist = securomV3_2;
 			}
@@ -2963,7 +2982,7 @@ BOOL ReadCDForCheckingSecuROM(
 				, BcdToDec(pDiscPerSector->subcode.current[20]), BcdToDec(pDiscPerSector->subcode.current[21]));
 
 			if (nRLBA == 5001 && nALBA == 5151) { // 5001(01:06:51), 5151(01:08:51)
-				// Supreme Snowboarding (Europe) http://redump.org/disc/32182/
+				// Supreme Snowboarding (Europe) https://redump.info/disc/32182/
 				OutputLog(standardOut | fileDisc, "Detected intentional subchannel in LBA 5000 => SecuROM 2nd version (a.k.a. NEW)\n");
 				pDisc->PROTECT.byExist = securomV2;
 			}
@@ -2979,7 +2998,7 @@ BOOL ReadCDForCheckingSecuROM(
 						WORD reCalcXorCrc16 = (WORD)(reCalcCrc16 ^ 0x0080);
 						if (pDiscPerSector->subcode.current[22] == HIBYTE(reCalcXorCrc16) &&
 							pDiscPerSector->subcode.current[23] == LOBYTE(reCalcXorCrc16)) {
-							// FIFA 99 (Europe) http://redump.org/disc/23791/
+							// FIFA 99 (Europe) https://redump.info/disc/23791/
 							OutputLog(standardOut | fileDisc
 								, "Detected intentional subchannel in LBA %d => SecuROM 1st version (a.k.a. OLD)\n", nTmpLBA);
 							pDisc->PROTECT.byExist = securomV1;
@@ -3014,7 +3033,7 @@ BOOL ExecCheckingByteOrder(
 	LPBYTE pBuf = NULL;
 	LPBYTE lpBuf = NULL;
 	if (!GetAlignedCallocatedBuffer(pDevice, &pBuf,
-		CD_RAW_SECTOR_WITH_C2_294_AND_SUBCODE_SIZE, &lpBuf, _T(__FUNCTION__), __LINE__)) {
+		CD_RAW_SECTOR_WITH_C2_AND_SUBCODE_SIZE, &lpBuf, _T(__FUNCTION__), __LINE__)) {
 		return FALSE;
 	}
 	BYTE lpCmd[CDB12GENERIC_LENGTH] = {};
@@ -3022,7 +3041,7 @@ BOOL ExecCheckingByteOrder(
 
 	BOOL bRet = TRUE;
 	if (!ExecReadCD(pExtArg, pDevice, lpCmd, 0, lpBuf
-		, CD_RAW_SECTOR_WITH_C2_294_AND_SUBCODE_SIZE, _T(__FUNCTION__), __LINE__)) {
+		, CD_RAW_SECTOR_WITH_C2_AND_SUBCODE_SIZE, _T(__FUNCTION__), __LINE__)) {
 		OutputLog(standardError | fileDrive,
 			"This drive doesn't support [OpCode: %#02x, C2flag: %d, SubCode: %x]\n"
 			, lpCmd[0], (lpCmd[9] & 0x6) >> 1, lpCmd[10]);

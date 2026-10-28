@@ -137,6 +137,10 @@ FILE* OpenProgrammabledFile(
 #endif
 		szFullPathName[_MAX_PATH + _MAX_FNAME - 1] = 0;
 		fp = _tfopen(szFullPathName, pszMode);
+		if(fp == NULL) {
+			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+			return NULL;
+		}
 #ifndef _WIN32
 		if (geteuid() == 0) {
 			uid_t uid; gid_t gid;

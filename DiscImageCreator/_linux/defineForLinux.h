@@ -13,7 +13,7 @@ typedef unsigned short      UINT16, *PUINT16;
 typedef unsigned int        UINT32, *PUINT32;
 typedef unsigned long long  UINT64, *PUINT64, ULONGLONG;
 
-#if defined(__x86_64__)
+#if __SIZEOF_POINTER__ == 8
 typedef long long INT_PTR, *PINT_PTR;
 typedef unsigned long long UINT_PTR, *PUINT_PTR;
 
@@ -2214,13 +2214,14 @@ typedef struct _AACS_READ_BINDING_NONCE {
 	};
 } AACS_READ_BINDING_NONCE, *PAACS_READ_BINDING_NONCE;
 
+#define NAME_NEEDED_SPACE 256
 
 // from stdlib.h
 #define _MAX_PATH   PATH_MAX
-#define _MAX_DRIVE  NAME_MAX
-#define _MAX_DIR    NAME_MAX
-#define _MAX_FNAME  NAME_MAX
-#define _MAX_EXT    NAME_MAX
+#define _MAX_DRIVE  NAME_NEEDED_SPACE
+#define _MAX_DIR    NAME_NEEDED_SPACE
+#define _MAX_FNAME  NAME_NEEDED_SPACE
+#define _MAX_EXT    NAME_NEEDED_SPACE
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -2239,6 +2240,7 @@ typedef struct _AACS_READ_BINDING_NONCE {
 #include <sys/statvfs.h>
 #if defined(__linux__)
 #include <linux/cdrom.h>
+#include <linux/fs.h>
 #include <linux/iso_fs.h>
 #include <linux/mmc/ioctl.h>
 #include <scsi/scsi.h>
@@ -2250,6 +2252,7 @@ typedef struct _AACS_READ_BINDING_NONCE {
 #include <IOKit/IOBSD.h>
 #include <IOKit/IOKitLib.h>
 #include <IOKit/scsi/SCSITaskLib.h>
+#include <IOKit/storage/IOStorageDeviceCharacteristics.h>
 #define ENUM_DYLD_BOOL 1
 #include <mach-o/dyld.h>
 #endif
@@ -2496,6 +2499,22 @@ off_t SetFilePointer(int fd, off_t pos, void* a, int origin);
 
 off64_t SetFilePointerEx(int fd, LARGE_INTEGER pos, void* a, int origin);
 #elif defined(__APPLE__) && defined(__MACH__)
+#define MAX_AUTHORING_DEVICE_NUM	16
+
+typedef struct _AUTHORING_DEVICE {
+	io_service_t service;
+	char bsdName[16];    // "disk4". Empty while the drive holds no disc.
+	char driveName[80];  // "PLEXTOR DVDR   PX-760A". There with or without a disc.
+} AUTHORING_DEVICE, *PAUTHORING_DEVICE;
+
+void CopyTrimmedProperty(CFStringRef src, char* dst, size_t dstSize);
+
+void GetDriveBSDName(io_service_t service, char* dst, size_t dstSize);
+
+void GetDriveName(io_service_t service, char* dst, size_t dstSize);
+
+void OutputAvailableDrives(PAUTHORING_DEVICE pDevices, int nDeviceNum);
+
 SCSITaskInterface** GetSCSITaskInterface(char* path);
 
 int CloseHandle(SCSITaskInterface** task);

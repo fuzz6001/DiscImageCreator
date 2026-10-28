@@ -33,7 +33,7 @@
 
 #define DEFAULT_REREAD_VAL			(4000)
 #define DEFAULT_CACHE_DELETE_VAL	(1)
-#define DEFAULT_SPTD_TIMEOUT_VAL	(60)
+#define DEFAULT_SPTD_TIMEOUT_VAL	(50000)
 
 BYTE g_aSyncHeader[SYNC_SIZE] = {
 	0x00, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -42,10 +42,10 @@ BYTE g_aSyncHeader[SYNC_SIZE] = {
 
 // These static variable is set at printAndSetPath().
 static _TCHAR s_szCurrentdir[_MAX_PATH];
-static _TCHAR s_szDrive[_MAX_DRIVE];
-static _TCHAR s_szDir[_MAX_DIR];
-static _TCHAR s_szFname[_MAX_FNAME];
-static _TCHAR s_szExt[_MAX_EXT];
+static _TCHAR s_szDrive[_MAX_DRIVE + 1];
+static _TCHAR s_szDir[_MAX_DIR + 1];
+static _TCHAR s_szFname[_MAX_FNAME + 1];
+static _TCHAR s_szExt[_MAX_EXT + 1];
 
 // These static variable is set at checkArg().
 static UINT s_uiFix = 0;
@@ -172,7 +172,7 @@ int execForDumping(PEXEC_TYPE pExecType, PEXT_ARG pExtArg, _TCHAR* pszFullPath, 
 		make_crc_table();
 		HASH hash = {};
 		hash.uiMax = 0;
-		if (*pExecType == disk) {
+		if (*pExecType == fd || *pExecType == disk) {
 			hash.uiMax = 1; // .bin
 		}
 		else if (*pExecType == bd) {
@@ -1949,7 +1949,7 @@ int createCmdFile(int argc, _TCHAR* argv[], _TCHAR* pszFullPath, LPTSTR pszDateT
 		if (!g_LogFile.fpCommandLine) {
 			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 			if (GetLastError() == 123) {
-				OutputErrorString("Please remove \\, /, :, *, ?, Åg, <, >, | of the filename\n");
+				OutputErrorString("Please remove \\, /, :, *, ?, \", \', <, >, | of the filename\n");
 			}
 			return FALSE;
 		}

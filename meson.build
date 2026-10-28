@@ -101,15 +101,49 @@ executable(
   ],
   include_directories: inc,
   dependencies: deps,
-  cpp_args: ['-Wno-unknown-pragmas'],
+  cpp_args: [ '-Wall', '-Wextra', '-Wno-unknown-pragmas'],
+  c_args: [ '-Wall', '-Wextra', '-Wno-unknown-pragmas'],
   install: true,
   install_dir: get_option('bindir'),
 )
+
+# copy assets into build directory for easier testing
+fs = import('fs')
+
+if meson.version().version_compare('>=0.64.0')
+  fs.copyfile('Release_ANSI/driveOffset.txt')
+  fs.copyfile('Release_ANSI/default.dat')
+  fs.copyfile('Release_ANSI/C2ErrorProtect.txt')
+  fs.copyfile('Release_ANSI/ReadErrorProtect.txt')
+else
+  configure_file(
+    input: 'Release_ANSI/driveOffset.txt',
+    output: 'driveOffset.txt',
+    copy: true,
+  )
+  configure_file(
+    input: 'Release_ANSI/default.dat',
+    output: 'default.dat',
+    copy: true,
+  )
+  configure_file(
+    input: 'Release_ANSI/C2ErrorProtect.txt',
+    output: 'C2ErrorProtect.txt',
+    copy: true,
+  )
+  configure_file(
+    input: 'Release_ANSI/ReadErrorProtect.txt',
+    output: 'ReadErrorProtect.txt',
+    copy: true,
+  )
+endif
 
 install_data(
   sources: [
     'Release_ANSI/default.dat',
     'Release_ANSI/driveOffset.txt',
+    'Release_ANSI/C2ErrorProtect.txt',
+    'Release_ANSI/ReadErrorProtect.txt',
   ],
   install_dir: get_option('datadir') / meson.project_name(),
 )

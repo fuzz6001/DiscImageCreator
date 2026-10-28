@@ -48,7 +48,13 @@ BOOL GetHandle(
 		FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
 	if (pDevice->hDevice == INVALID_HANDLE_VALUE) {
 #elif defined(__linux__)
-	pDevice->hDevice = open(pDevice->drivepath, O_RDONLY | O_NONBLOCK, 0777);
+	pDevice->hDevice = open(pDevice->drivepath, O_RDWR | O_EXCL | O_NONBLOCK, 0777);
+	if (pDevice->hDevice == -1) {
+		// Write-protected / read-only media (e.g. a write-protected floppy)
+		// rejects O_RDWR with EROFS. Dumping only needs read access, so fall
+		// back to read-only; setDiscSpeed (which needs write) is then skipped.
+		pDevice->hDevice = open(pDevice->drivepath, O_RDONLY | O_EXCL | O_NONBLOCK, 0777);
+	}
 	if (pDevice->hDevice == -1) {
 #elif defined(__APPLE__) && defined(__MACH__)
 	pDevice->hDevice = GetSCSITaskInterface(pDevice->drivepath);
@@ -63,7 +69,7 @@ BOOL GetHandle(
 BOOL GetDriveOffsetManually(
 	LPINT lpDriveOffset
 ) {
-	_TCHAR aBuf[6] = {};
+	_TCHAR aBuf[6 + 1] = {};
 	OutputString(
 		"This drive doesn't define in driveOffset.txt\n"
 		"Please input drive offset(Samples): ");
@@ -163,7 +169,7 @@ BOOL GetDriveOffsetAuto(
 // https://hima-tubusi.blogspot.com/2014/09/strtok.html
 char* strtoks(char* s1, const char* s2) {
 	static char* str = 0;
-	register size_t i, j;
+	size_t i, j;
 
 	if (s1) {
 		str = s1;

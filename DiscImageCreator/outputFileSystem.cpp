@@ -421,7 +421,7 @@ VOID OutputFsVolumeDescriptorDetail(
 			"\t                    Copyright File Identifier: %.18ls\n"
 			"\t                     Abstract File Identifier: %.18ls\n"
 			"\t                Bibliographic File Identifier: %.18ls\n"
-			, &lpWBuf, &lpWBuf[64], &lpWBuf[128], &lpWBuf[192], &lpWBufCopyright, &lpWBufAbstract, &lpWBufBibliographic);
+			, &lpWBuf[0], &lpWBuf[64], &lpWBuf[128], &lpWBuf[192], &lpWBufCopyright[0], &lpWBufAbstract[0], &lpWBufBibliographic[0]);
 	}
 	else {
 		OutputVolDescLog(
@@ -1185,8 +1185,8 @@ VOID OutputFsMasterDirectoryBlocks(
 	*lpuiCatalogFileSize = MAKEUINT(MAKEWORD(lpBuf[81], lpBuf[80]), MAKEWORD(lpBuf[79], lpBuf[78]));
 	OutputVolDescWithLBALog2("Master Directory Blocks",
 		"\t                       volume signature: %04x\n"
-		"\t       date and time of volume creation: %llu (%s)\n"
-		"\t     date and time of last modification: %llu (%s)\n"
+		"\t       date and time of volume creation: %ld (%s)\n"
+		"\t     date and time of last modification: %ld (%s)\n"
 		"\t                      volume attributes: %04x\n"
 		"\t      number of files in root directory: %u\n"
 		"\t           first block of volume bitmap: %u\n"
@@ -1199,7 +1199,7 @@ VOID OutputFsMasterDirectoryBlocks(
 		"\t     number of unused allocation blocks: %u\n"
 		"\t                     volume name length: %u\n"
 		"\t                            volume name: %.*" CHARWIDTH "s\n"
-		"\t           date and time of last backup: %llu (%s)\n"
+		"\t           date and time of last backup: %ld (%s)\n"
 		"\t          volume backup sequence number: %u\n"
 		"\t                     volume write count: %u\n"
 		"\t   clump size for extents overflow file: %u\n"
@@ -1305,9 +1305,9 @@ VOID OutputFsCatalogFiles(
 			"\t                    directory flags: %u\n"
 			"\t                  directory valence: %u\n"
 			"\t                       directory ID: %u\n"
-			"\t          date and time of creation: %llu (%s)\n"
-			"\t date and time of last modification: %llu (%s)\n"
-			"\t       date and time of last backup: %llu (%s)\n"
+			"\t          date and time of creation: %ld (%s)\n"
+			"\t date and time of last modification: %ld (%s)\n"
+			"\t       date and time of last backup: %ld (%s)\n"
 			"\t                 Finder information\n"
 			"\t\t        folder's window rectangle: %016llX\n"
 			"\t\t                            flags: %04X\n"
@@ -1358,9 +1358,9 @@ VOID OutputFsCatalogFiles(
 			"\t first alloc. blk. of resource fork: %u\n"
 			"\t       logical EOF of resource fork: %u\n"
 			"\t      physical EOF of resource fork: %u\n"
-			"\t          date and time of creation: %llu (%s)\n"
-			"\t date and time of last modification: %llu (%s)\n"
-			"\t       date and time of last backup: %llu (%s)\n"
+			"\t          date and time of creation: %ld (%s)\n"
+			"\t date and time of last modification: %ld (%s)\n"
+			"\t       date and time of last backup: %ld (%s)\n"
 			"\t      additional Finder information\n"
 			"\t\t                          icon ID: %u\n"
 			"\t\t             script flag and code: %u\n"
